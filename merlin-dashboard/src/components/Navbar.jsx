@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FiChevronDown, FiLogOut, FiUser, FiSettings } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Navbar = () => {
   const [isPreMeetingOpen, setIsPreMeetingOpen] = useState(false);
@@ -45,21 +45,29 @@ const Navbar = () => {
               </button>
               {isPreMeetingOpen && (
                 <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-10">
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <Link
+                    to="/meetings"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsPreMeetingOpen(false)}
+                  >
                     Your meetings
-                  </a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  </Link>
+                  <Link
+                    to="/icp-analysis"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsPreMeetingOpen(false)}
+                  >
                     ICP analysis
-                  </a>
+                  </Link>
                   <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     Customise
                   </a>
                 </div>
               )}
             </div>
-            <a href="#" className="text-gray-700 hover:text-gray-900">
+            <Link to="/data-enrichment" className="text-gray-700 hover:text-gray-900">
               Data enrichment
-            </a>
+            </Link>
             <a href="#" className="text-gray-700 hover:text-gray-900">
               Services
             </a>

@@ -5,6 +5,9 @@ import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import ProtectedRoute from './components/ProtectedRoute';
+import Meetings from './pages/Meetings';
+import ICPAnalysis from './pages/ICPAnalysis';
+import DataEnrichment from './pages/DataEnrichment';
 
 function App() {
   return (
@@ -21,6 +24,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/meetings"
+            element={
+              <ProtectedRoute>
+                <Meetings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/icp-analysis"
+            element={
+              <ProtectedRoute>
+                <ICPAnalysis />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/data-enrichment"
+            element={
+              <ProtectedRoute>
+                <DataEnrichment />
               </ProtectedRoute>
             }
           />
