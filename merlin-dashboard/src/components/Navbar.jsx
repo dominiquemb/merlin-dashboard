@@ -68,9 +68,9 @@ const Navbar = () => {
             <Link to="/data-enrichment" className="text-gray-700 hover:text-gray-900">
               Data enrichment
             </Link>
-            <a href="#" className="text-gray-700 hover:text-gray-900">
+            <Link to="/services" className="text-gray-700 hover:text-gray-900">
               Services
-            </a>
+            </Link>
           </div>
         </div>
 

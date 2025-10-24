@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Meetings from './pages/Meetings';
 import ICPAnalysis from './pages/ICPAnalysis';
 import DataEnrichment from './pages/DataEnrichment';
+import Services from './pages/Services';
 
 function App() {
   return (
@@ -48,6 +49,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DataEnrichment />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/services"
+            element={
+              <ProtectedRoute>
+                <Services />
               </ProtectedRoute>
             }
           />
