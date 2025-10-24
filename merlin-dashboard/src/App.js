@@ -1,14 +1,21 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import Dashboard from './components/Dashboard';
-import Login from './components/Login';
-import Signup from './components/Signup';
-import ProtectedRoute from './components/ProtectedRoute';
-import Meetings from './pages/Meetings';
-import ICPAnalysis from './pages/ICPAnalysis';
-import DataEnrichment from './pages/DataEnrichment';
-import Services from './pages/Services';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import Dashboard from "./components/Dashboard";
+import Login from "./components/Login";
+import Signup from "./components/Signup";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Meetings from "./pages/Meetings";
+import ICPAnalysis from "./pages/ICPAnalysis";
+import DataEnrichment from "./pages/DataEnrichment";
+import Services from "./pages/Services";
+import Settings from "./pages/Settings";
+import Billing from "./pages/Billing";
 
 function App() {
   return (
@@ -57,6 +64,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Services />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/billing"
+            element={
+              <ProtectedRoute>
+                <Billing />
               </ProtectedRoute>
             }
           />
