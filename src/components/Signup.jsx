@@ -51,15 +51,15 @@ const Signup = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-cream flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account created!</h2>
+            <h2 className="text-2xl font-display font-bold text-black mb-2">Account created!</h2>
             <p className="text-gray-600 mb-4">
               Check your email to verify your account. Redirecting to login...
             </p>
@@ -70,19 +70,19 @@ const Signup = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-cream flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">M</span>
-          </div>
-        </div>
+            {/* Logo */}
+            <div className="flex justify-center mb-10">
+              <div className="flex items-center">
+                <img src="/logo.png" alt="Merlin" className="h-12" />
+              </div>
+            </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-2">
+            <h2 className="text-3xl font-display font-bold text-black text-center mb-3">
               Create your account
             </h2>
             <p className="text-gray-600 text-center">
@@ -109,7 +109,7 @@ const Signup = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition"
                 placeholder="you@example.com"
               />
             </div>
@@ -126,7 +126,7 @@ const Signup = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition"
                 placeholder="At least 6 characters"
               />
             </div>
@@ -143,7 +143,7 @@ const Signup = () => {
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition"
                 placeholder="Confirm your password"
               />
             </div>
@@ -151,7 +151,7 @@ const Signup = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-black text-white py-3.5 px-4 rounded-xl font-semibold hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating account...' : 'Create account'}
             </button>
@@ -171,7 +171,7 @@ const Signup = () => {
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition"
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -185,7 +185,7 @@ const Signup = () => {
           {/* Sign in link */}
           <p className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <a href="/login" className="font-medium text-primary hover:text-blue-700">
+            <a href="/login" className="font-medium text-gold hover:text-accent">
               Sign in
             </a>
           </p>

@@ -15,7 +15,7 @@ const MeetingCard = ({ meeting, isSelected, onClick }) => {
       onClick={onClick}
       className={`p-4 rounded-xl border-2 cursor-pointer transition mb-3 ${
         isSelected
-          ? 'border-primary bg-blue-50'
+          ? 'border-gold bg-accent-light'
           : 'border-gray-200 bg-white hover:border-gray-300'
       }`}
     >

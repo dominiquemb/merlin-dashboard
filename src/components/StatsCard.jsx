@@ -7,8 +7,8 @@ const StatsCard = () => {
       <div className="flex items-start space-x-4">
         {/* Icon */}
         <div className="flex-shrink-0">
-          <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-            <FiClock className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 bg-gold rounded-xl flex items-center justify-center">
+            <FiClock className="w-6 h-6 text-black" />
           </div>
         </div>
 

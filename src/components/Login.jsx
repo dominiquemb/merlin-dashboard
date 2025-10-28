@@ -34,19 +34,19 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-cream flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center">
-            <span className="text-white font-bold text-2xl">M</span>
-          </div>
-        </div>
+            {/* Logo */}
+            <div className="flex justify-center mb-10">
+              <div className="flex items-center">
+                <img src="/logo.png" alt="Merlin" className="h-12" />
+              </div>
+            </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-2">
+            <h2 className="text-3xl font-display font-bold text-black text-center mb-3">
               Welcome back
             </h2>
             <p className="text-gray-600 text-center">
@@ -90,7 +90,7 @@ const Login = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition"
                 placeholder="Enter your password"
               />
             </div>
@@ -101,7 +101,7 @@ const Login = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                  className="h-4 w-4 text-gold focus:ring-gold border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
                   Remember me
@@ -109,7 +109,7 @@ const Login = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-primary hover:text-blue-700">
+                <a href="#" className="font-medium text-gold hover:text-accent">
                   Forgot password?
                 </a>
               </div>
@@ -118,7 +118,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-black text-white py-3.5 px-4 rounded-xl font-semibold hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
@@ -138,7 +138,7 @@ const Login = () => {
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition"
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -152,7 +152,7 @@ const Login = () => {
           {/* Sign up link */}
           <p className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <a href="/signup" className="font-medium text-primary hover:text-blue-700">
+            <a href="/signup" className="font-medium text-gold hover:text-accent">
               Sign up
             </a>
           </p>

@@ -35,17 +35,17 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-cream">
       <Navbar />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-12">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <div className="mb-12">
+          <h1 className="text-4xl font-display font-bold text-black mb-3">
             Welcome back, {user?.email?.split('@')[0] || 'there'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-lg">
             Here's what's happening with your business today.
           </p>
         </div>
