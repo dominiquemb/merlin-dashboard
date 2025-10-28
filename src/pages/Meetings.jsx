@@ -152,7 +152,7 @@ const Meetings = () => {
 
       <div className="flex h-[calc(100vh-73px)]">
         {/* Left Sidebar - Meetings List */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        <div className="w-[420px] bg-white border-r border-gray-200 flex flex-col">
           {/* Sidebar Header */}
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900 mb-3">Your Meetings</h2>

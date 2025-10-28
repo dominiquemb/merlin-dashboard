@@ -13,42 +13,42 @@ const MeetingCard = ({ meeting, isSelected, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className={`p-4 rounded-xl border-2 cursor-pointer transition mb-3 ${
+      className={`p-6 rounded-xl border-2 cursor-pointer transition mb-3 shadow-sm ${
         isSelected
           ? 'border-gold bg-accent-light'
-          : 'border-gray-200 bg-white hover:border-gray-300'
+          : 'border-neutral-300 bg-white hover:border-neutral-400'
       }`}
     >
       {/* Header with title and badges */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 mb-1">{meeting.title}</h3>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <FiClock className="w-4 h-4" />
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-neutral-800 mb-3 text-lg">{meeting.title}</h3>
+          <div className="flex items-center gap-2 text-sm text-neutral-600">
+            <FiClock className="w-4 h-4 flex-shrink-0" />
             <span>{meeting.time}</span>
             <span>•</span>
             <span>{meeting.duration}</span>
           </div>
         </div>
-        <div className="flex gap-2 ml-2">
-          <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
+        <div className="flex gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
             <FiCheck className="w-3 h-3" />
             Verified
           </div>
-          <span className={`${getTypeColor(meeting.type)} text-white px-2 py-1 rounded text-xs font-medium`}>
+          <span className={`${getTypeColor(meeting.type)} text-white px-3 py-1 rounded text-xs font-medium whitespace-nowrap`}>
             {getTypeText(meeting.type)}
           </span>
         </div>
       </div>
 
       {/* Platform */}
-      <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+      <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
         <FiMapPin className="w-4 h-4" />
         <span>{meeting.platform}</span>
       </div>
 
       {/* Attendees */}
-      <div className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="flex items-center gap-2 text-sm text-neutral-600">
         <FiUsers className="w-4 h-4" />
         <span>{meeting.attendees.join(', ')}</span>
       </div>
