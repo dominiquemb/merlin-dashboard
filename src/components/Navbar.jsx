@@ -59,7 +59,7 @@ const Navbar = () => {
 
           {/* Nav links */}
           <div className="flex items-center space-x-8">
-            <div className="relative">
+            <div className="relative" ref={preMeetingRef}>
               <button
                 onClick={() => setIsPreMeetingOpen(!isPreMeetingOpen)}
                 className="flex items-center space-x-1 text-neutral-800 hover:text-neutral-800 transition font-medium"
@@ -124,7 +124,7 @@ const Navbar = () => {
           </Link>
 
           {/* User profile */}
-          <div className="relative">
+          <div className="relative" ref={userMenuRef}>
             <button
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center space-x-2 cursor-pointer hover:bg-neutral-200 rounded-lg px-3 py-2 transition"
