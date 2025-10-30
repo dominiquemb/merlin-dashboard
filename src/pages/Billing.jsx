@@ -142,7 +142,7 @@ const Billing = () => {
         </div>
 
         {/* Current Balance Section */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+        <div className="bg-accent-light border border-accent rounded-xl p-6 mb-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">
@@ -241,7 +241,7 @@ const Billing = () => {
                 key={pkg.name}
                 className={`relative border-2 rounded-xl p-6 ${
                   pkg.isPopular
-                    ? "border-primary bg-blue-50"
+                    ? "border-primary bg-accent-light"
                     : "border-gray-200 bg-white"
                 }`}
               >
@@ -334,7 +334,7 @@ const Billing = () => {
                     <p className="text-sm text-gray-600">{item.description}</p>
                   </div>
                 </div>
-                <span className="text-sm font-medium text-primary bg-blue-50 px-3 py-1 rounded-full">
+                <span className="text-sm font-medium text-primary bg-accent-light px-3 py-1 rounded-full">
                   {item.credits}
                 </span>
               </div>
