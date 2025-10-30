@@ -22,7 +22,7 @@ const MeetingDetails = ({ meeting }) => {
         {/* Attendees */}
         <div className="space-y-6 mb-8">
           {meeting.attendeeDetails?.map((attendee, index) => (
-            <div key={index} className="bg-white border border-gray-200 rounded-xl p-6">
+            <div key={index} className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
               {/* Attendee Header */}
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
@@ -73,7 +73,7 @@ const MeetingDetails = ({ meeting }) => {
         </div>
 
         {/* Key Insights */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <FiTrendingUp className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold text-gray-900">Key Insights</h2>
@@ -89,7 +89,7 @@ const MeetingDetails = ({ meeting }) => {
         </div>
 
         {/* Recent Activity */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-2 mb-4">
             <FiClock className="w-5 h-5 text-purple-600" />
             <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
@@ -106,7 +106,7 @@ const MeetingDetails = ({ meeting }) => {
 
         {/* Company Information */}
         {meeting.companyInfo && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <FiBriefcase className="w-5 h-5 text-green-600" />
               <h2 className="text-lg font-semibold text-gray-900">Company Information</h2>

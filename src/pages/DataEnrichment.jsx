@@ -130,7 +130,7 @@ const DataEnrichment = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f1e8]">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] via-[#f8f6f1] to-[#faf9f5]">
       <Navbar />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
@@ -177,7 +177,7 @@ const DataEnrichment = () => {
         {activeTab === 'csv' && (
           <>
             {/* Upload CSV Section */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <FiFileText className="w-5 h-5 text-primary" />
@@ -224,7 +224,7 @@ const DataEnrichment = () => {
             </div>
 
             {/* Select Output Fields */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900">Select Output Fields</h2>
@@ -293,7 +293,7 @@ const DataEnrichment = () => {
             </div>
 
             {/* Delivery Method */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <FiMail className="w-5 h-5 text-green-600" />
@@ -337,7 +337,7 @@ const DataEnrichment = () => {
         {activeTab === 'api' && (
           <>
             {/* API Keys Section */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -430,7 +430,7 @@ const DataEnrichment = () => {
             </div>
 
             {/* API Documentation Section */}
-            <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
               <div className="flex items-start gap-3 mb-6">
                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <FiCode className="w-5 h-5 text-orange-600" />

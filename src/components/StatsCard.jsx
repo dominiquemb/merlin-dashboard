@@ -3,7 +3,7 @@ import { FiClock } from 'react-icons/fi';
 
 const StatsCard = () => {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 mb-8">
+    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl shadow-sm p-6 mb-8">
       <div className="flex items-start space-x-4">
         {/* Icon */}
         <div className="flex-shrink-0">

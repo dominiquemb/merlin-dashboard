@@ -46,7 +46,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f1e8]">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] via-[#f8f6f1] to-[#faf9f5]">
       <Navbar />
 
       <main className="max-w-3xl mx-auto px-6 py-12">
@@ -57,7 +57,7 @@ const Settings = () => {
         </div>
 
         {/* Profile Information Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-8 mb-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-8 mb-6">
           <div className="flex items-start gap-4 mb-8">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiUser className="w-6 h-6 text-blue-600" />
@@ -135,7 +135,7 @@ const Settings = () => {
         </div>
 
         {/* Change Password Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-8 mb-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-8 mb-6">
           <div className="flex items-start gap-4 mb-8">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiLock className="w-6 h-6 text-purple-600" />
@@ -281,7 +281,7 @@ const Settings = () => {
         </div>
 
         {/* Two-Factor Authentication Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-8">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-8">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">

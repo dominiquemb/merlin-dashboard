@@ -126,7 +126,7 @@ const ICPSettings = () => {
     <div className="mb-8">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between hover:bg-gray-50 transition"
+        className="w-full bg-[#fafafa] border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50 transition"
       >
         <div className="flex items-center gap-3">
           <FiTarget className="w-5 h-5 text-primary" />
@@ -136,7 +136,7 @@ const ICPSettings = () => {
       </button>
 
       {isOpen && (
-        <div className="bg-white border border-t-0 border-gray-200 rounded-b-xl p-6 space-y-8">
+        <div className="bg-[#fafafa] border border-t-0 border-gray-100 rounded-b-2xl p-6 space-y-8">
           {/* Send my insights to */}
           <div>
             <div className="flex items-center gap-2 mb-3">

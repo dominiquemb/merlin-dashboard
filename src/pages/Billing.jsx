@@ -127,7 +127,7 @@ const Billing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f1e8]">
+    <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] via-[#f8f6f1] to-[#faf9f5]">
       <Navbar />
 
       <main className="max-w-6xl mx-auto px-6 py-12">
@@ -191,7 +191,7 @@ const Billing = () => {
         </div>
 
         {/* Auto Top-Up Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -230,7 +230,7 @@ const Billing = () => {
         </div>
 
         {/* Credit Packages Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
             Credit Packages
           </h2>
@@ -309,7 +309,7 @@ const Billing = () => {
         </div>
 
         {/* How Credits Work Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">
             How Credits Work
           </h2>
@@ -343,7 +343,7 @@ const Billing = () => {
         </div>
 
         {/* Transaction History Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
+        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-6">
             <FiClock className="w-5 h-5 text-gray-600" />
             <h2 className="text-xl font-semibold text-gray-900">
