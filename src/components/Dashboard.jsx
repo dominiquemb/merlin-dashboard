@@ -13,8 +13,8 @@ const Dashboard = () => {
       title: 'Pre meeting intelligence',
       description: 'Get comprehensive insights about your prospects before every meeting.',
       buttonText: 'View Meetings',
-      iconBgColor: 'bg-yellow-50',
-      iconColor: 'text-yellow-600',
+      iconBgColor: 'bg-accent-light',
+      iconColor: 'text-accent',
     },
     {
       icon: <FiDatabase className="w-6 h-6" />,

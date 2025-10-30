@@ -138,7 +138,7 @@ const DataEnrichment = () => {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">Data Enrichment</h1>
-            <div className="flex items-center gap-2 text-sm text-primary bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
+            <div className="flex items-center gap-2 text-sm text-primary bg-accent-light border border-accent rounded-lg px-3 py-1.5">
               <FiCreditCard className="w-4 h-4" />
               <span className="font-medium">1 credit/record</span>
             </div>
@@ -179,7 +179,7 @@ const DataEnrichment = () => {
             {/* Upload CSV Section */}
             <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-accent-light rounded-lg flex items-center justify-center flex-shrink-0">
                   <FiFileText className="w-5 h-5 text-primary" />
                 </div>
                 <div>
@@ -198,7 +198,7 @@ const DataEnrichment = () => {
                   onChange={handleFileUpload}
                   className="hidden"
                 />
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary hover:bg-blue-50 transition cursor-pointer">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-primary hover:bg-accent-light transition cursor-pointer">
                   <FiUpload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-700 font-medium mb-1">
                     {uploadedFile ? uploadedFile.name : 'Click to upload or drag and drop'}
@@ -210,10 +210,10 @@ const DataEnrichment = () => {
               </label>
 
               {/* Info Box */}
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="mt-4 p-4 bg-accent-light border border-accent rounded-lg">
                 <div className="flex items-start gap-2">
-                  <FiInfo className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-yellow-900">
+                  <FiInfo className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-gray-900">
                     <span className="font-semibold">Required CSV format:</span>
                     <br />
                     Your CSV must contain either an <span className="font-semibold text-primary">email</span> column or a{' '}
@@ -230,7 +230,7 @@ const DataEnrichment = () => {
                   <h2 className="text-lg font-semibold text-gray-900">Select Output Fields</h2>
                   <p className="text-sm text-gray-600">Choose which data points you want to enrich</p>
                 </div>
-                <span className="bg-yellow-500 text-white text-sm px-3 py-1 rounded-full font-medium">
+                <span className="bg-accent-light0 text-white text-sm px-3 py-1 rounded-full font-medium">
                   {selectedFields.length} fields selected
                 </span>
               </div>
@@ -244,7 +244,7 @@ const DataEnrichment = () => {
                       key={field.id}
                       className={`flex items-start gap-3 p-4 rounded-lg cursor-pointer transition ${
                         selectedFields.includes(field.id)
-                          ? 'bg-blue-50 border-2 border-primary'
+                          ? 'bg-accent-light border-2 border-primary'
                           : 'border border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -272,7 +272,7 @@ const DataEnrichment = () => {
                       key={field.id}
                       className={`flex items-start gap-3 p-4 rounded-lg cursor-pointer transition ${
                         selectedFields.includes(field.id)
-                          ? 'bg-blue-50 border-2 border-primary'
+                          ? 'bg-accent-light border-2 border-primary'
                           : 'border border-gray-200 hover:bg-gray-50'
                       }`}
                     >
@@ -457,10 +457,10 @@ const DataEnrichment = () => {
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Headers</h3>
                 <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700 space-y-1">
                   <div>
-                    <span className="text-yellow-600">Authorization:</span> Bearer YOUR_API_KEY
+                    <span className="text-accent">Authorization:</span> Bearer YOUR_API_KEY
                   </div>
                   <div>
-                    <span className="text-yellow-600">Content-Type:</span> application/json
+                    <span className="text-accent">Content-Type:</span> application/json
                   </div>
                 </div>
               </div>

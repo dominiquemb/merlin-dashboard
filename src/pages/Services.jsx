@@ -60,8 +60,8 @@ const Services = () => {
           <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
             {/* Icon and Header */}
             <div className="mb-6">
-              <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center mb-4">
-                <HiOutlineUserGroup className="w-6 h-6 text-yellow-600" />
+              <div className="w-12 h-12 bg-accent-light rounded-lg flex items-center justify-center mb-4">
+                <HiOutlineUserGroup className="w-6 h-6 text-accent" />
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Stakeholder Intelligence</h2>
               <p className="text-sm font-medium text-gray-600 mb-4">
@@ -192,7 +192,7 @@ const Services = () => {
         </div>
 
         {/* Why Choose Merlin Section */}
-        <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-8 mb-12">
+        <div className="bg-accent-light border border-accent rounded-xl p-8 mb-12">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-3">Why Choose Merlin?</h2>
           <p className="text-gray-600 text-center mb-8">
             Merlin combines cutting-edge AI with deep B2B expertise to increase revenues
@@ -201,8 +201,8 @@ const Services = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {/* Expert Team */}
             <div className="text-center">
-              <div className="w-14 h-14 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <FiUsers className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiUsers className="w-7 h-7 text-black" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Expert Team</h3>
               <p className="text-sm text-gray-600">

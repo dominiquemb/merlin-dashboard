@@ -53,8 +53,8 @@ const Billing = () => {
   const creditUsage = [
     {
       icon: FiCalendar,
-      iconColor: "text-yellow-600",
-      iconBg: "bg-yellow-50",
+      iconColor: "text-accent",
+      iconBg: "bg-accent-light",
       name: "Meeting Insight",
       description: "Full research on meeting attendees",
       credits: "1 credit",
@@ -69,7 +69,7 @@ const Billing = () => {
     },
     {
       icon: FiSun,
-      iconColor: "text-yellow-600",
+      iconColor: "text-accent",
       iconBg: "bg-yellow-100",
       name: "Custom Insight Question",
       description: "Per custom question answered",
@@ -218,9 +218,9 @@ const Billing = () => {
             </button>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-            <FiInfo className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-yellow-900">
+          <div className="bg-accent-light border border-accent rounded-lg p-4 flex items-start gap-3">
+            <FiInfo className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-gray-900">
               Auto Top-Up automatically purchases credits when your balance
               falls below a threshold you set. This ensures uninterrupted
               service and you'll never miss important meeting insights or data
