@@ -148,7 +148,7 @@ const Meetings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#f5f1e8]">
       <Navbar />
 
       <div className="flex h-[calc(100vh-73px)]">

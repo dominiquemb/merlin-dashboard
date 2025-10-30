@@ -35,7 +35,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-[#f5f1e8]">
       <Navbar />
 
       {/* Main Content */}
