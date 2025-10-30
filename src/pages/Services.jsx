@@ -57,7 +57,7 @@ const Services = () => {
         {/* Service Cards Grid */}
         <div className="grid md:grid-cols-2 gap-6 mb-12">
           {/* Stakeholder Intelligence Card */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
             {/* Icon and Header */}
             <div className="mb-6">
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
@@ -124,7 +124,7 @@ const Services = () => {
           </div>
 
           {/* PR Services Card */}
-          <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
             {/* Icon and Header */}
             <div className="mb-6">
               <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">

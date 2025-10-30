@@ -95,7 +95,7 @@ const Signup = () => {
             </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-[#fafafa] rounded-2xl shadow-sm border border-gray-100 p-8">
           <div className="mb-8">
             <h2 className="text-3xl font-display font-bold text-black text-center mb-3">
               Create your account
@@ -175,10 +175,10 @@ const Signup = () => {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-gray-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              <span className="px-2 bg-[#fafafa] text-gray-500">Or continue with</span>
             </div>
           </div>
 
@@ -186,7 +186,7 @@ const Signup = () => {
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition"
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -201,7 +201,7 @@ const Signup = () => {
           <button
             type="button"
             onClick={handleMicrosoftSignIn}
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition mt-3"
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition mt-3"
           >
             <svg className="w-5 h-5" viewBox="0 0 23 23">
               <path fill="#f35325" d="M1 1h10v10H1z"/>
