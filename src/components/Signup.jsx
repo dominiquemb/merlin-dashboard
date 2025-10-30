@@ -89,8 +89,8 @@ const Signup = () => {
       <div className="max-w-md w-full">
             {/* Logo */}
             <div className="flex justify-center mb-10">
-              <div className="flex items-center">
-                <img src="/logo.png" alt="Merlin" className="h-16" />
+              <div className="flex items-center group cursor-pointer">
+                <img src="/logo.png" alt="Merlin" className="h-16 transition-transform duration-300 ease-out group-hover:-translate-y-1" />
               </div>
             </div>
 

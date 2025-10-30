@@ -97,8 +97,8 @@ const Navbar = () => {
         <div className="flex items-center space-x-10">
           {/* Logo */}
           <div className="flex items-center">
-            <Link to="/dashboard" className="flex items-center">
-              <img src="/logo.png" alt="Merlin" className="h-12" />
+            <Link to="/dashboard" className="flex items-center group">
+              <img src="/logo.png" alt="Merlin" className="h-12 transition-transform duration-300 ease-out group-hover:-translate-y-1" />
             </Link>
           </div>
 
