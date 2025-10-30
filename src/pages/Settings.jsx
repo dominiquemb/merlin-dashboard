@@ -5,7 +5,32 @@ import { useAuth } from '../contexts/AuthContext';
 
 const Settings = () => {
   const { user } = useAuth();
-  const [fullName, setFullName] = useState('John Smith');
+  
+  // Check if user signed in with OAuth (Google, GitHub, etc.)
+  // Check the providers array for any OAuth provider
+  const providers = user?.app_metadata?.providers || [];
+  const oauthProviders = providers.filter(p => p !== 'email');
+  const isOAuthUser = oauthProviders.length > 0;
+  
+  const getProviderName = () => {
+    // Get the first non-email provider
+    const provider = oauthProviders[0];
+    if (provider === 'google') return 'Google';
+    if (provider === 'github') return 'GitHub';
+    if (provider === 'gitlab') return 'GitLab';
+    if (provider === 'azure') return 'Azure';
+    if (provider === 'facebook') return 'Facebook';
+    return 'your OAuth provider';
+  };
+  
+  console.log('User object:', user);
+  console.log('App metadata:', user?.app_metadata);
+  console.log('Providers array:', providers);
+  console.log('OAuth providers:', oauthProviders);
+  console.log('Is OAuth user:', isOAuthUser);
+  console.log('Provider:', user?.app_metadata?.provider);
+  
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || 'John Smith');
   const [emailAddress, setEmailAddress] = useState(user?.email || 'john.smith@company.com');
 
   const [currentPassword, setCurrentPassword] = useState('');
@@ -35,6 +60,12 @@ const Settings = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Settings</h1>
           <p className="text-gray-600">Manage your account settings and preferences</p>
+          {/* Debug info */}
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
+            <strong>Debug:</strong> isOAuthUser = {isOAuthUser ? 'true' : 'false'}, 
+            providers = {JSON.stringify(providers)},
+            oauthProviders = {JSON.stringify(oauthProviders)}
+          </div>
         </div>
 
         {/* Profile Information Section */}
@@ -51,49 +82,68 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Profile Fields */}
-          <div className="space-y-6 mb-6">
-            {/* Full Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                  <FiUser className="w-5 h-5 text-gray-400" />
+          {/* OAuth Notice */}
+          {isOAuthUser ? (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <FiShield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900 mb-1">
+                    Managed by {getProviderName()}
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    Your name and email are managed through your {getProviderName()} account. To update these details, please visit your {getProviderName()} account settings.
+                  </p>
                 </div>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                  placeholder="John Smith"
-                />
               </div>
             </div>
+          ) : (
+            <>
+              {/* Profile Fields */}
+              <div className="space-y-6 mb-6">
+                {/* Full Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
+                      <FiUser className="w-5 h-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                      placeholder="John Smith"
+                    />
+                  </div>
+                </div>
 
-            {/* Email Address */}
-            <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                placeholder="john.smith@company.com"
-              />
-            </div>
-          </div>
+                {/* Email Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={emailAddress}
+                    onChange={(e) => setEmailAddress(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    placeholder="john.smith@company.com"
+                  />
+                </div>
+              </div>
 
-          {/* Save Changes Button */}
-          <button
-            onClick={handleSaveProfile}
-            className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition"
-          >
-            Save Changes
-          </button>
+              {/* Save Changes Button */}
+              <button
+                onClick={handleSaveProfile}
+                className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition"
+              >
+                Save Changes
+              </button>
+            </>
+          )}
         </div>
 
         {/* Change Password Section */}
@@ -110,7 +160,24 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Password Fields */}
+          {/* OAuth Notice for Password */}
+          {isOAuthUser ? (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <FiShield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-blue-900 mb-1">
+                    Password Managed by {getProviderName()}
+                  </p>
+                  <p className="text-sm text-blue-700">
+                    You signed in using {getProviderName()} OAuth. Your password is managed through your {getProviderName()} account and cannot be changed here. To update your password, please visit your {getProviderName()} account security settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Password Fields */}
           <div className="space-y-6 mb-6">
             {/* Current Password */}
             <div>
@@ -221,6 +288,8 @@ const Settings = () => {
           >
             Update Password
           </button>
+            </>
+          )}
         </div>
 
         {/* Two-Factor Authentication Section */}

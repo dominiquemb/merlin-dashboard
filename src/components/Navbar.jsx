@@ -40,10 +40,33 @@ const Navbar = () => {
   };
 
   const getUserInitials = () => {
+    // Try to get initials from full name first
+    if (user?.user_metadata?.full_name) {
+      const names = user.user_metadata.full_name.split(' ');
+      if (names.length >= 2) {
+        return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+      }
+      return names[0].substring(0, 2).toUpperCase();
+    }
+    // Fallback to email
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
     }
     return "JS";
+  };
+
+  const getUserName = () => {
+    // Try first name from Google
+    if (user?.user_metadata?.full_name) {
+      return user.user_metadata.full_name.split(' ')[0];
+    }
+    // Fallback to email username
+    return user?.email?.split("@")[0] || "User";
+  };
+
+  const getUserAvatar = () => {
+    // Get avatar from Google OAuth
+    return user?.user_metadata?.avatar_url || user?.user_metadata?.picture;
   };
 
   return (
@@ -131,11 +154,19 @@ const Navbar = () => {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center space-x-2 cursor-pointer hover:bg-neutral-200 rounded-lg px-3 py-2 transition"
             >
-              <div className="w-9 h-9 bg-gold rounded-full flex items-center justify-center text-black font-semibold text-sm">
-                {getUserInitials()}
-              </div>
+              {getUserAvatar() ? (
+                <img 
+                  src={getUserAvatar()} 
+                  alt={getUserName()}
+                  className="w-9 h-9 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-9 h-9 bg-gold rounded-full flex items-center justify-center text-black font-semibold text-sm">
+                  {getUserInitials()}
+                </div>
+              )}
               <span className="text-neutral-800 font-medium">
-                {user?.email?.split("@")[0] || "User"}
+                {getUserName()}
               </span>
               <FiChevronDown className="w-4 h-4 text-neutral-800" />
             </button>
