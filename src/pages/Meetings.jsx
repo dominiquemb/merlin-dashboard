@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import MeetingCard from '../components/MeetingCard';
 import MeetingDetails from '../components/MeetingDetails';
+import CreditsBadge from '../components/CreditsBadge';
 import { FiChevronLeft, FiChevronRight, FiCreditCard } from 'react-icons/fi';
 
 const Meetings = () => {
@@ -158,9 +159,11 @@ const Meetings = () => {
             <h2 className="text-xl font-bold text-gray-900 mb-3">Your Meetings</h2>
 
             {/* Credit Badge */}
-            <div className="flex items-center space-x-2 bg-accent-light border border-accent rounded-full px-4 py-2 mb-4">
-              <FiCreditCard className="w-5 h-5 text-accent" />
-              <span className="text-sm font-semibold text-neutral-800">1 credit/meeting</span>
+            <div className="mb-4">
+              <CreditsBadge 
+                text="1 credit/meeting"
+                icon={<FiCreditCard />}
+              />
             </div>
 
             {/* Date Navigation */}

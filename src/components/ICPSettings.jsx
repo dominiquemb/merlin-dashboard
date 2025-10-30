@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiChevronDown, FiChevronUp, FiMail, FiMessageSquare, FiBriefcase, FiTarget, FiZap, FiCreditCard } from 'react-icons/fi';
+import CreditsBadge from './CreditsBadge';
 
 const ICPSettings = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -274,10 +275,10 @@ const ICPSettings = () => {
                 <FiZap className="w-5 h-5 text-orange-600" />
                 <h3 className="font-semibold text-gray-900">Custom Insights</h3>
               </div>
-              <div className="flex items-center gap-2 text-sm text-primary bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
-                <FiCreditCard className="w-4 h-4" />
-                <span className="font-medium">1 credit/question</span>
-              </div>
+              <CreditsBadge 
+                text="1 credit/question"
+                icon={<FiCreditCard />}
+              />
             </div>
             <p className="text-sm text-gray-600 mb-4">Select questions to answer for your meetings</p>
 

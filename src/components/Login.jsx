@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,8 +7,28 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
+
+  // Check for OAuth errors in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const errorDescription = params.get('error_description');
+    const errorCode = params.get('error_code');
+    
+    if (errorDescription) {
+      console.error('OAuth error from URL:', errorDescription, errorCode);
+      setError(errorDescription);
+    }
+  }, []);
+
+  // Redirect to dashboard if user is already logged in (including after OAuth)
+  useEffect(() => {
+    if (user) {
+      console.log('User detected in Login, redirecting to dashboard:', user);
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,7 +59,7 @@ const Login = () => {
             {/* Logo */}
             <div className="flex justify-center mb-10">
               <div className="flex items-center">
-                <img src="/logo.png" alt="Merlin" className="h-12" />
+                <img src="/logo.png" alt="Merlin" className="h-16" />
               </div>
             </div>
 

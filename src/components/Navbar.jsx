@@ -7,6 +7,7 @@ import {
 } from "react-icons/fi";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
+import CreditsBadge from "./CreditsBadge";
 
 const Navbar = () => {
   const [isPreMeetingOpen, setIsPreMeetingOpen] = useState(false);
@@ -53,7 +54,7 @@ const Navbar = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/dashboard" className="flex items-center">
-              <img src="/logo.png" alt="Merlin" className="h-8" />
+              <img src="/logo.png" alt="Merlin" className="h-12" />
             </Link>
           </div>
 
@@ -103,24 +104,25 @@ const Navbar = () => {
         <div className="flex items-center space-x-5">
           {/* Credits badge */}
           <Link to="/billing" className="hover:opacity-80 transition">
-            <div className="flex items-center space-x-2 bg-accent-light border border-accent rounded-full px-4 py-2">
-              <svg
-                className="w-5 h-5 text-accent"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span className="text-sm font-semibold text-neutral-800">
-                100 credits
-              </span>
-            </div>
+            <CreditsBadge 
+              amount="100"
+              text="credits"
+              icon={
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              }
+            />
           </Link>
 
           {/* User profile */}

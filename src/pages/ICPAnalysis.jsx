@@ -2,6 +2,7 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import ICPMeetingCard from '../components/ICPMeetingCard';
 import ICPSettings from '../components/ICPSettings';
+import CreditsBadge from '../components/CreditsBadge';
 import { FiAlertCircle, FiCalendar, FiCreditCard } from 'react-icons/fi';
 
 const ICPAnalysis = () => {
@@ -84,10 +85,10 @@ const ICPAnalysis = () => {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold text-gray-900">ICP Analysis</h1>
-            <div className="flex items-center gap-2 text-sm text-primary bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
-              <FiCreditCard className="w-4 h-4" />
-              <span className="font-medium">1 credit/analysis</span>
-            </div>
+            <CreditsBadge 
+              text="1 credit/analysis"
+              icon={<FiCreditCard />}
+            />
           </div>
           <p className="text-gray-600">
             Review upcoming meetings with low alignment to your Ideal Customer Profile

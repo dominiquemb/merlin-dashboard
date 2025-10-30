@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,8 +9,15 @@ const Signup = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect to dashboard if user is already logged in (including after OAuth)
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,7 +82,7 @@ const Signup = () => {
             {/* Logo */}
             <div className="flex justify-center mb-10">
               <div className="flex items-center">
-                <img src="/logo.png" alt="Merlin" className="h-12" />
+                <img src="/logo.png" alt="Merlin" className="h-16" />
               </div>
             </div>
 
