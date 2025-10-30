@@ -2,7 +2,7 @@ import React from 'react';
 
 const ServiceCard = ({ icon, title, description, buttonText, iconBgColor, iconColor }) => {
   return (
-    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl shadow-sm p-6 hover:shadow-md transition-all">
+    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 hover:border-gray-200 transition-all">
       {/* Icon */}
       <div className={`w-14 h-14 ${iconBgColor} rounded-xl flex items-center justify-center mb-5`}>
         <div className={iconColor}>

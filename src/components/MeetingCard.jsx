@@ -13,10 +13,10 @@ const MeetingCard = ({ meeting, isSelected, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className={`p-6 rounded-2xl border-2 cursor-pointer transition mb-3 shadow-sm ${
+      className={`p-6 rounded-2xl border-2 cursor-pointer transition mb-3 ${
         isSelected
           ? 'border-gold bg-accent-light'
-          : 'border-gray-100 bg-[#fafafa] hover:border-gray-200 hover:shadow-md'
+          : 'border-gray-100 bg-[#fafafa] hover:border-gray-200'
       }`}
     >
       {/* Header with title and badges */}
