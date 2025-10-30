@@ -86,6 +86,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Sign in with Microsoft OAuth
+  const signInWithMicrosoft = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          scopes: 'email',
+        },
+      });
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error: error.message };
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -93,6 +110,7 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     signInWithGoogle,
+    signInWithMicrosoft,
   };
 
   return (

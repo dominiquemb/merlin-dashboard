@@ -42,9 +42,15 @@ const Dashboard = () => {
       <main className="max-w-7xl mx-auto px-6 py-12">
             {/* Welcome Section */}
             <div className="mb-12">
-              <h1 className="text-4xl font-display font-bold text-black mb-3">
-                Welcome back, {user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there'}
-              </h1>
+            <h1 className="text-4xl font-display font-bold text-black mb-3">
+              Welcome back, {
+                user?.user_metadata?.given_name || 
+                user?.user_metadata?.full_name?.split(' ')[0] || 
+                user?.user_metadata?.name?.split(' ')[0] || 
+                user?.email?.split('@')[0] || 
+                'there'
+              }
+            </h1>
               <p className="text-gray-600 text-lg">
                 Here's what's happening with your business today.
               </p>

@@ -40,9 +40,21 @@ const Navbar = () => {
   };
 
   const getUserInitials = () => {
-    // Try to get initials from full name first
+    // Try Microsoft's given_name + family_name
+    if (user?.user_metadata?.given_name && user?.user_metadata?.family_name) {
+      return `${user.user_metadata.given_name[0]}${user.user_metadata.family_name[0]}`.toUpperCase();
+    }
+    // Try to get initials from full name (Google)
     if (user?.user_metadata?.full_name) {
       const names = user.user_metadata.full_name.split(' ');
+      if (names.length >= 2) {
+        return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+      }
+      return names[0].substring(0, 2).toUpperCase();
+    }
+    // Try generic name field
+    if (user?.user_metadata?.name) {
+      const names = user.user_metadata.name.split(' ');
       if (names.length >= 2) {
         return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
       }
@@ -56,9 +68,18 @@ const Navbar = () => {
   };
 
   const getUserName = () => {
-    // Try first name from Google
+    // Try first name from OAuth providers (Google, Microsoft, etc.)
+    if (user?.user_metadata?.given_name) {
+      // Microsoft stores first name as given_name
+      return user.user_metadata.given_name;
+    }
     if (user?.user_metadata?.full_name) {
+      // Google stores full name, extract first name
       return user.user_metadata.full_name.split(' ')[0];
+    }
+    if (user?.user_metadata?.name) {
+      // Some providers use 'name'
+      return user.user_metadata.name.split(' ')[0];
     }
     // Fallback to email username
     return user?.email?.split("@")[0] || "User";

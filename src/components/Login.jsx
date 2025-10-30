@@ -7,7 +7,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle, user } = useAuth();
+  const { signIn, signInWithGoogle, signInWithMicrosoft, user } = useAuth();
   const navigate = useNavigate();
 
   // Check for OAuth errors in URL
@@ -45,6 +45,14 @@ const Login = () => {
   const handleGoogleSignIn = async () => {
     setError('');
     const { error } = await signInWithGoogle();
+    if (error) {
+      setError(error);
+    }
+  };
+
+  const handleMicrosoftSignIn = async () => {
+    setError('');
+    const { error } = await signInWithMicrosoft();
     if (error) {
       setError(error);
     }
@@ -164,6 +172,21 @@ const Login = () => {
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
             Continue with Google
+          </button>
+
+          {/* Microsoft Sign In */}
+          <button
+            type="button"
+            onClick={handleMicrosoftSignIn}
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold transition mt-3"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 23 23">
+              <path fill="#f35325" d="M1 1h10v10H1z"/>
+              <path fill="#81bc06" d="M12 1h10v10H12z"/>
+              <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+              <path fill="#ffba08" d="M12 12h10v10H12z"/>
+            </svg>
+            Continue with Microsoft
           </button>
 
           {/* Sign up link */}
