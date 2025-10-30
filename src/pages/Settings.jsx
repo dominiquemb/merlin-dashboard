@@ -59,8 +59,8 @@ const Settings = () => {
         {/* Profile Information Section */}
         <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-8 mb-6">
           <div className="flex items-start gap-4 mb-8">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FiUser className="w-6 h-6 text-blue-600" />
+            <div className="w-12 h-12 bg-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FiUser className="w-6 h-6 text-yellow-600" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-1">Profile Information</h2>
@@ -72,14 +72,14 @@ const Settings = () => {
 
           {/* OAuth Notice */}
           {isOAuthUser ? (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-start gap-3">
-                <FiShield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <FiShield className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-blue-900 mb-1">
+                  <p className="text-sm font-medium text-yellow-900 mb-1">
                     Managed by {getProviderName()}
                   </p>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-yellow-700">
                     Your name and email are managed through your {getProviderName()} account. To update these details, please visit your {getProviderName()} account settings.
                   </p>
                 </div>
@@ -150,14 +150,14 @@ const Settings = () => {
 
           {/* OAuth Notice for Password */}
           {isOAuthUser ? (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <div className="flex items-start gap-3">
-                <FiShield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <FiShield className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-medium text-blue-900 mb-1">
+                  <p className="text-sm font-medium text-yellow-900 mb-1">
                     Password Managed by {getProviderName()}
                   </p>
-                  <p className="text-sm text-blue-700">
+                  <p className="text-sm text-yellow-700">
                     You signed in using {getProviderName()} OAuth. Your password is managed through your {getProviderName()} account and cannot be changed here. To update your password, please visit your {getProviderName()} account security settings.
                   </p>
                 </div>

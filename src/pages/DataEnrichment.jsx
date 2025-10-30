@@ -179,7 +179,7 @@ const DataEnrichment = () => {
             {/* Upload CSV Section */}
             <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center flex-shrink-0">
                   <FiFileText className="w-5 h-5 text-primary" />
                 </div>
                 <div>
@@ -210,10 +210,10 @@ const DataEnrichment = () => {
               </label>
 
               {/* Info Box */}
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <div className="flex items-start gap-2">
-                  <FiInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-900">
+                  <FiInfo className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-yellow-900">
                     <span className="font-semibold">Required CSV format:</span>
                     <br />
                     Your CSV must contain either an <span className="font-semibold text-primary">email</span> column or a{' '}
@@ -457,10 +457,10 @@ const DataEnrichment = () => {
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Headers</h3>
                 <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700 space-y-1">
                   <div>
-                    <span className="text-blue-600">Authorization:</span> Bearer YOUR_API_KEY
+                    <span className="text-yellow-600">Authorization:</span> Bearer YOUR_API_KEY
                   </div>
                   <div>
-                    <span className="text-blue-600">Content-Type:</span> application/json
+                    <span className="text-yellow-600">Content-Type:</span> application/json
                   </div>
                 </div>
               </div>
