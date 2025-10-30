@@ -14,10 +14,8 @@ const Login = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const errorDescription = params.get('error_description');
-    const errorCode = params.get('error_code');
     
     if (errorDescription) {
-      console.error('OAuth error from URL:', errorDescription, errorCode);
       setError(errorDescription);
     }
   }, []);
@@ -25,7 +23,6 @@ const Login = () => {
   // Redirect to dashboard if user is already logged in (including after OAuth)
   useEffect(() => {
     if (user) {
-      console.log('User detected in Login, redirecting to dashboard:', user);
       navigate('/dashboard');
     }
   }, [user, navigate]);

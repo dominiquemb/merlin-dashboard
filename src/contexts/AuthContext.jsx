@@ -18,17 +18,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
     // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state change:', event, session);
-      if (session?.user) {
-        console.log('User metadata:', session.user.user_metadata);
-      }
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -84,11 +79,9 @@ export const AuthProvider = ({ children }) => {
           redirectTo: `${window.location.origin}/dashboard`,
         },
       });
-      console.log('OAuth initiated:', data, error);
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('OAuth error:', error);
       return { data: null, error: error.message };
     }
   };

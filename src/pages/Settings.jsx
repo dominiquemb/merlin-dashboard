@@ -23,12 +23,6 @@ const Settings = () => {
     return 'your OAuth provider';
   };
   
-  console.log('User object:', user);
-  console.log('App metadata:', user?.app_metadata);
-  console.log('Providers array:', providers);
-  console.log('OAuth providers:', oauthProviders);
-  console.log('Is OAuth user:', isOAuthUser);
-  console.log('Provider:', user?.app_metadata?.provider);
   
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || 'John Smith');
   const [emailAddress, setEmailAddress] = useState(user?.email || 'john.smith@company.com');
@@ -60,12 +54,6 @@ const Settings = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Settings</h1>
           <p className="text-gray-600">Manage your account settings and preferences</p>
-          {/* Debug info */}
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs">
-            <strong>Debug:</strong> isOAuthUser = {isOAuthUser ? 'true' : 'false'}, 
-            providers = {JSON.stringify(providers)},
-            oauthProviders = {JSON.stringify(oauthProviders)}
-          </div>
         </div>
 
         {/* Profile Information Section */}
