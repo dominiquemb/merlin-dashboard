@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FiMail,
   FiPhone,
@@ -10,6 +10,9 @@ import {
   FiMapPin,
   FiUsers,
   FiInfo,
+  FiShare2,
+  FiCheck,
+  FiX,
 } from 'react-icons/fi';
 
 const formatDateTime = (date) =>
@@ -196,6 +199,51 @@ const ResearchDetails = ({ meeting }) => {
 };
 
 const MeetingDetails = ({ meeting }) => {
+  const [shareStatus, setShareStatus] = useState(null);
+  const [shareUrl, setShareUrl] = useState('');
+
+  const handleShare = async () => {
+    if (!meeting?.id) return;
+
+    setShareStatus('loading');
+
+    try {
+      const { createShareLink } = await import('../lib/sharesApi');
+      const result = await createShareLink(meeting.id);
+
+      if (result.success) {
+        setShareUrl(result.shareUrl);
+        setShareStatus('success');
+
+        // Copy to clipboard
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(result.shareUrl);
+        }
+
+        // Reset after 3 seconds
+        setTimeout(() => {
+          setShareStatus(null);
+        }, 3000);
+      } else {
+        setShareStatus('error');
+        console.error('Failed to create share link:', result.error);
+
+        // Reset after 3 seconds
+        setTimeout(() => {
+          setShareStatus(null);
+        }, 3000);
+      }
+    } catch (error) {
+      setShareStatus('error');
+      console.error('Error sharing meeting:', error);
+
+      // Reset after 3 seconds
+      setTimeout(() => {
+        setShareStatus(null);
+      }, 3000);
+    }
+  };
+
   if (!meeting) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -212,9 +260,45 @@ const MeetingDetails = ({ meeting }) => {
     return (
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-4xl space-y-6">
-          <div className="mb-4">
-            <h1 className="text-2xl font-bold text-gray-900 mb-1">{meeting.title}</h1>
-            <p className="text-gray-600">Synced from your calendar</p>
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-1">{meeting.title}</h1>
+              <p className="text-gray-600">Synced from your calendar</p>
+            </div>
+            <button
+              onClick={handleShare}
+              disabled={shareStatus === 'loading'}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                shareStatus === 'success'
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : shareStatus === 'error'
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : 'bg-primary text-white hover:bg-primary/90'
+              } ${shareStatus === 'loading' ? 'opacity-75 cursor-not-allowed' : ''}`}
+              title="Share this meeting brief"
+            >
+              {shareStatus === 'loading' ? (
+                <>
+                  <FiShare2 className="w-4 h-4 animate-pulse" />
+                  <span>Generating...</span>
+                </>
+              ) : shareStatus === 'success' ? (
+                <>
+                  <FiCheck className="w-4 h-4" />
+                  <span>Link Copied!</span>
+                </>
+              ) : shareStatus === 'error' ? (
+                <>
+                  <FiX className="w-4 h-4" />
+                  <span>Failed</span>
+                </>
+              ) : (
+                <>
+                  <FiShare2 className="w-4 h-4" />
+                  <span>Share</span>
+                </>
+              )}
+            </button>
           </div>
 
           <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">

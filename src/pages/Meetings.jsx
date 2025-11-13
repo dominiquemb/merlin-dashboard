@@ -356,6 +356,7 @@ const transformEventsToMeetings = (events = []) => {
             ? event.description
             : '',
         enrichmentStatus: event.enrichment_status,
+        readyToSend: event.enriched_ready_to_send || false,
       };
 
       return augmentMeetingWithEnrichment(event, meeting);
@@ -562,10 +563,17 @@ const Meetings = () => {
 
             {/* Credit Badge */}
             <div className="mb-4">
-              <CreditsBadge 
+              <CreditsBadge
                 text="1 credit/meeting"
                 icon={<FiCreditCard />}
               />
+            </div>
+
+            {/* Reminder Text */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+              <p className="text-xs text-blue-800">
+                We focus on researching new meetings only and exclude repeated meetings or attendees to help conserve your credits.
+              </p>
             </div>
 
             {/* Sync Calendar Button */}

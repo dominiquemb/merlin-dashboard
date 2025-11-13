@@ -17,6 +17,7 @@ import DataEnrichment from "./pages/DataEnrichment";
 import Services from "./pages/Services";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
+import SharedBrief from "./pages/SharedBrief";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/shared/:token" element={<SharedBrief />} />
 
           {/* Protected routes */}
           <Route

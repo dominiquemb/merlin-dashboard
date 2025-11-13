@@ -31,10 +31,16 @@ const MeetingCard = ({ meeting, isSelected, onClick }) => {
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
-            <FiCheck className="w-3 h-3" />
-            Verified
-          </div>
+          {meeting.readyToSend ? (
+            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+              <FiCheck className="w-3 h-3" />
+              Verified
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+              Pending Verification
+            </div>
+          )}
           <span className={`${getTypeColor(meeting.type)} text-white px-3 py-1 rounded text-xs font-medium whitespace-nowrap`}>
             {getTypeText(meeting.type)}
           </span>
