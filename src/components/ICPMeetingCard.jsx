@@ -3,6 +3,9 @@ import { FiClock, FiMapPin, FiUsers, FiAlertCircle, FiBriefcase } from 'react-ic
 
 const ICPMeetingCard = ({ meeting }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  
+  // Determine if this is an ICP fit or non-fit based on reasons
+  const isIcpFit = meeting.icpScore && meeting.icpScore.score >= 10;
 
   return (
     <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-4">
@@ -11,9 +14,15 @@ const ICPMeetingCard = ({ meeting }) => {
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-lg font-semibold text-gray-900">{meeting.title}</h3>
-            <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium">
-              Low ICP Match
-            </span>
+            {isIcpFit ? (
+              <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
+                ✓ ICP Match
+              </span>
+            ) : (
+              <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium">
+                Low ICP Match
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
@@ -54,40 +63,42 @@ const ICPMeetingCard = ({ meeting }) => {
 
         {/* ICP Score */}
         {meeting.icpScore && (
-          <div className="ml-4 bg-red-50 border-2 border-red-200 rounded-lg px-4 py-2">
+          <div className={`ml-4 rounded-lg px-4 py-2 ${isIcpFit ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{meeting.icpScore.score}</div>
-              <div className="text-xs text-red-600">/ {meeting.icpScore.maxScore}</div>
+              <div className={`text-2xl font-bold ${isIcpFit ? 'text-green-600' : 'text-red-600'}`}>{meeting.icpScore.score}</div>
+              <div className={`text-xs ${isIcpFit ? 'text-green-600' : 'text-red-600'}`}>/ {meeting.icpScore.maxScore}</div>
             </div>
           </div>
         )}
       </div>
 
       {/* Reasons Section */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full"
-      >
-        <div className="flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-lg p-4 hover:bg-orange-100 transition">
-          <FiAlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 text-left">
-            <p className="font-medium text-gray-900 mb-2">Reasons why not relevant:</p>
-            {isExpanded && (
-              <ul className="space-y-2 text-sm text-gray-700">
-                {meeting.reasons.map((reason, idx) => (
-                  <li key={idx} className="flex items-start gap-2">
-                    <span className="text-orange-600 mt-1">•</span>
-                    <span>{reason}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
+      {meeting.reasons && meeting.reasons.length > 0 && (
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full"
+        >
+          <div className={`flex items-start gap-2 rounded-lg p-4 transition ${isIcpFit ? 'bg-green-50 border border-green-200 hover:bg-green-100' : 'bg-orange-50 border border-orange-200 hover:bg-orange-100'}`}>
+            <FiAlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${isIcpFit ? 'text-green-600' : 'text-orange-600'}`} />
+            <div className="flex-1 text-left">
+              <p className="font-medium text-gray-900 mb-2">{isIcpFit ? 'Reasons why relevant:' : 'Reasons why not relevant:'}</p>
+              {isExpanded && (
+                <ul className="space-y-2 text-sm text-gray-700">
+                  {meeting.reasons.map((reason, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className={`mt-1 ${isIcpFit ? 'text-green-600' : 'text-orange-600'}`}>•</span>
+                      <span>{reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div className="text-gray-400 text-sm flex-shrink-0">
+              {isExpanded ? '▼' : '▶'}
+            </div>
           </div>
-          <div className="text-gray-400 text-sm flex-shrink-0">
-            {isExpanded ? '▼' : '▶'}
-          </div>
-        </div>
-      </button>
+        </button>
+      )}
     </div>
   );
 };

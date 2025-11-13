@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiChevronDown, FiChevronUp, FiMail, FiMessageSquare, FiBriefcase, FiTarget, FiZap, FiCreditCard } from 'react-icons/fi';
 import CreditsBadge from './CreditsBadge';
 
+// Helper function to get auth token
+const getAuthToken = async () => {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.REACT_APP_SUPABASE_URL,
+      process.env.REACT_APP_SUPABASE_ANON_KEY
+    );
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch (error) {
+    console.error('Failed to get auth token:', error);
+    return null;
+  }
+};
+
 const ICPSettings = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
   const [icpAnalysisEnabled, setIcpAnalysisEnabled] = useState(true);
   const [deliveryChannels, setDeliveryChannels] = useState({
     email: true,
     slack: false,
     crm: false,
   });
-  const [employeeRange, setEmployeeRange] = useState('');
-  const [yearFounded, setYearFounded] = useState('');
+  const [employeeRanges, setEmployeeRanges] = useState([]);
+  const [yearsFounded, setYearsFounded] = useState([]);
   const [customQuestion, setCustomQuestion] = useState('');
 
   // Custom insights questions organized by category
@@ -122,6 +141,141 @@ const ICPSettings = () => {
     return Object.values(selectedQuestions).reduce((total, questions) => total + questions.length, 0);
   };
 
+  // Load ICP settings from backend
+  useEffect(() => {
+    const loadICPSettings = async () => {
+      setIsLoading(true);
+      try {
+        const token = await getAuthToken();
+        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+        
+        const response = await fetch(`${apiUrl}/icp/status`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('ICP status:', data);
+          
+          // Load existing criteria if available
+          if (data.icp_criteria) {
+            const criteria = data.icp_criteria;
+            console.log('Loading ICP criteria from backend:', criteria);
+            
+            // Map backend values to frontend format
+            const backendToFrontendEmployees = {
+              '1-10': '1-10',
+              '11-50': '11-50',
+              '51-100': '51-200',
+              '101-500': '201-500',
+              '500+': '501-1000',
+            };
+            
+            const backendToFrontendYears = {
+              'Last 12 months': '0-2',
+              '1-3 years': '3-5',
+              'More than 3 years': '6-10',
+            };
+            
+            if (criteria.employee_sizes && Array.isArray(criteria.employee_sizes)) {
+              console.log('Backend employee_sizes:', criteria.employee_sizes);
+              const mappedSizes = criteria.employee_sizes.map(size => backendToFrontendEmployees[size] || size);
+              console.log('Mapped to frontend:', mappedSizes);
+              setEmployeeRanges(mappedSizes);
+              console.log('Set employeeRanges state to:', mappedSizes);
+            }
+            
+            if (criteria.founded_years && Array.isArray(criteria.founded_years)) {
+              console.log('Backend founded_years:', criteria.founded_years);
+              const mappedYears = criteria.founded_years.map(year => backendToFrontendYears[year] || year);
+              console.log('Mapped to frontend:', mappedYears);
+              setYearsFounded(mappedYears);
+              console.log('Set yearsFounded state to:', mappedYears);
+            }
+            
+            if (typeof criteria.enabled !== 'undefined') {
+              setIcpAnalysisEnabled(criteria.enabled);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading ICP settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadICPSettings();
+  }, []);
+
+  //Save ICP settings to backend
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    setSaveMessage('');
+    
+    try {
+      const token = await getAuthToken();
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+      // Map frontend values to backend format
+      const employeeSizesMap = {
+        '1-10': '1-10',
+        '11-50': '11-50',
+        '51-200': '51-100',  // Backend uses 51-100 and 101-500
+        '201-500': '101-500',
+        '501-1000': '500+',
+        '1001-5000': '500+',
+        '5001+': '500+',
+      };
+
+      const yearsFoundedMap = {
+        '0-2': 'Last 12 months',
+        '3-5': '1-3 years',
+        '6-10': 'More than 3 years',
+        '11-20': 'More than 3 years',
+        '20+': 'More than 3 years',
+      };
+
+      const requestBody = {
+        enabled: icpAnalysisEnabled,
+        employee_sizes: employeeRanges.map(range => employeeSizesMap[range] || range),
+        founded_years: yearsFounded.map(year => yearsFoundedMap[year] || year),
+      };
+
+      console.log('Saving ICP criteria:', requestBody);
+
+      const response = await fetch(`${apiUrl}/icp/criteria`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSaveMessage('✅ Settings saved successfully!');
+        setTimeout(() => {
+          setSaveMessage('');
+          setIsOpen(false);
+        }, 2000);
+      } else {
+        setSaveMessage(`❌ ${result.message || 'Failed to save settings'}`);
+      }
+      
+    } catch (error) {
+      console.error('Error saving ICP settings:', error);
+      setSaveMessage('❌ Failed to save settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="mb-8">
       <button
@@ -216,41 +370,58 @@ const ICPSettings = () => {
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <FiBriefcase className="w-4 h-4" />
-                  Number of Employees
+                  Number of Employees (select all that apply)
                 </label>
-                <select
-                  value={employeeRange}
-                  onChange={(e) => setEmployeeRange(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                >
-                  <option value="">Select employee range</option>
-                  <option value="1-10">1-10 employees</option>
-                  <option value="11-50">11-50 employees</option>
-                  <option value="51-200">51-200 employees</option>
-                  <option value="201-500">201-500 employees</option>
-                  <option value="501-1000">501-1000 employees</option>
-                  <option value="1001-5000">1001-5000 employees</option>
-                  <option value="5001+">5001+ employees</option>
-                </select>
+                {console.log('Rendering employee checkboxes, employeeRanges state:', employeeRanges)}
+                <div className="space-y-2">
+                  {['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001+'].map(range => {
+                    const isChecked = employeeRanges.includes(range);
+                    console.log(`Checkbox ${range}: checked=${isChecked}, employeeRanges=`, employeeRanges);
+                    return (
+                      <label key={range} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEmployeeRanges([...employeeRanges, range]);
+                            } else {
+                              setEmployeeRanges(employeeRanges.filter(r => r !== range));
+                            }
+                          }}
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                        />
+                        <span className="text-sm text-gray-700">{range} employees</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                   <FiTarget className="w-4 h-4" />
-                  Year Founded
+                  Year Founded (select all that apply)
                 </label>
-                <select
-                  value={yearFounded}
-                  onChange={(e) => setYearFounded(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                >
-                  <option value="">Select company age</option>
-                  <option value="0-2">Founded 0-2 years ago</option>
-                  <option value="3-5">Founded 3-5 years ago</option>
-                  <option value="6-10">Founded 6-10 years ago</option>
-                  <option value="11-20">Founded 11-20 years ago</option>
-                  <option value="20+">Founded 20+ years ago</option>
-                </select>
+                <div className="space-y-2">
+                  {['0-2', '3-5', '6-10', '11-20', '20+'].map(years => (
+                    <label key={years} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={yearsFounded.includes(years)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setYearsFounded([...yearsFounded, years]);
+                          } else {
+                            setYearsFounded(yearsFounded.filter(y => y !== years));
+                          }
+                        }}
+                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <span className="text-sm text-gray-700">Founded {years} years ago</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -332,22 +503,28 @@ const ICPSettings = () => {
             </div>
           </div>
 
+          {/* Save Message */}
+          {saveMessage && (
+            <div className={`p-3 rounded-lg ${saveMessage.includes('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              {saveMessage}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               onClick={() => setIsOpen(false)}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+              disabled={isSaving}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50"
             >
               Cancel
             </button>
             <button
-              onClick={() => {
-                // Save logic here
-                setIsOpen(false);
-              }}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition"
+              onClick={handleSaveSettings}
+              disabled={isSaving}
+              className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50"
             >
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
