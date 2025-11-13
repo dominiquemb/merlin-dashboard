@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import {
   FiShoppingCart,
@@ -10,10 +10,23 @@ import {
   FiSun,
   FiDatabase,
 } from "react-icons/fi";
+import {
+  getCreditBalance,
+  getCreditTransactions,
+  purchaseCredits,
+  getAutoTopUpSettings,
+  updateAutoTopUpSettings,
+} from "../lib/billingApi";
 
 const Billing = () => {
   const [autoTopUpEnabled, setAutoTopUpEnabled] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [creditsUsedThisMonth, setCreditsUsedThisMonth] = useState(0);
+  const [transactions, setTransactions] = useState([]);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   const creditPackages = [
     {
@@ -85,45 +98,92 @@ const Billing = () => {
     },
   ];
 
-  const transactions = [
-    {
-      date: "Oct 18, 2025",
-      description: "Data enrichment - 45 records",
-      credits: -45,
-      balance: 1250,
-    },
-    {
-      date: "Oct 17, 2025",
-      description: "Meeting insights - 8 meetings",
-      credits: -8,
-      balance: 1295,
-    },
-    {
-      date: "Oct 17, 2025",
-      description: "ICP analysis - 3 meetings",
-      credits: -3,
-      balance: 1303,
-    },
-    {
-      date: "Oct 15, 2025",
-      description: "Purchased Professional Package",
-      credits: 2000,
-      balance: 1306,
-    },
-    {
-      date: "Oct 14, 2025",
-      description: "Meeting insights - 12 meetings",
-      credits: -12,
-      balance: -694,
-    },
-  ];
+  // Fetch credit balance on mount
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        setIsLoadingBalance(true);
+        const data = await getCreditBalance();
+        setCreditBalance(data.credits_balance);
+        setCreditsUsedThisMonth(data.credits_used_this_month);
+      } catch (error) {
+        console.error("Error fetching credit balance:", error);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
 
-  const handlePurchase = (packageName) => {
-    console.log("Purchasing package:", packageName);
+    fetchBalance();
+  }, []);
+
+  // Fetch transactions on mount
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setIsLoadingTransactions(true);
+        const data = await getCreditTransactions();
+        setTransactions(data);
+      } catch (error) {
+        console.error("Error fetching transactions:", error);
+      } finally {
+        setIsLoadingTransactions(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
+
+  // Fetch auto top-up settings on mount
+  useEffect(() => {
+    const fetchAutoTopUp = async () => {
+      try {
+        const data = await getAutoTopUpSettings();
+        setAutoTopUpEnabled(data.enabled);
+      } catch (error) {
+        console.error("Error fetching auto top-up settings:", error);
+      }
+    };
+
+    fetchAutoTopUp();
+  }, []);
+
+  const handlePurchase = async (pkg) => {
+    try {
+      setIsPurchasing(true);
+      const result = await purchaseCredits(pkg.name, pkg.credits, pkg.price);
+
+      if (result.success) {
+        // Update balance
+        setCreditBalance(result.new_balance);
+
+        // Refresh transactions
+        const newTransactions = await getCreditTransactions();
+        setTransactions(newTransactions);
+
+        alert(`Successfully purchased ${pkg.credits} credits!`);
+      }
+    } catch (error) {
+      console.error("Error purchasing credits:", error);
+      alert("Failed to purchase credits. Please try again.");
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  const handleAutoTopUpToggle = async () => {
+    try {
+      const newValue = !autoTopUpEnabled;
+      await updateAutoTopUpSettings(newValue);
+      setAutoTopUpEnabled(newValue);
+    } catch (error) {
+      console.error("Error updating auto top-up:", error);
+      alert("Failed to update auto top-up settings.");
+    }
   };
 
   const handleRequestQuote = () => {
     console.log("Requesting custom quote for:", customAmount, "credits");
+    window.location.href = `mailto:insights@usemerlin.io?subject=Custom Credit Package Request&body=I would like to request a quote for ${customAmount} credits.`;
   };
 
   return (
@@ -163,7 +223,7 @@ const Billing = () => {
                   />
                 </svg>
                 <span className="text-2xl font-bold text-gray-900">
-                  1,250 Credits
+                  {isLoadingBalance ? "Loading..." : `${creditBalance.toLocaleString()} Credits`}
                 </span>
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-600">
@@ -180,7 +240,7 @@ const Billing = () => {
                     d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
                   />
                 </svg>
-                <span>234 credits used this month</span>
+                <span>{creditsUsedThisMonth} credits used this month</span>
               </div>
             </div>
             <button className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition">
@@ -205,7 +265,7 @@ const Billing = () => {
               </div>
             </div>
             <button
-              onClick={() => setAutoTopUpEnabled(!autoTopUpEnabled)}
+              onClick={handleAutoTopUpToggle}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
                 autoTopUpEnabled ? "bg-gray-900" : "bg-gray-300"
               }`}
@@ -269,14 +329,15 @@ const Billing = () => {
                   )}
                 </div>
                 <button
-                  onClick={() => handlePurchase(pkg.name)}
-                  className={`w-full mt-4 px-4 py-2.5 rounded-lg font-medium transition ${
+                  onClick={() => handlePurchase(pkg)}
+                  disabled={isPurchasing}
+                  className={`w-full mt-4 px-4 py-2.5 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
                     pkg.isPopular
                       ? "bg-gray-900 text-white hover:bg-gray-800"
                       : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  Purchase
+                  {isPurchasing ? "Processing..." : "Purchase"}
                 </button>
               </div>
             ))}
@@ -370,7 +431,20 @@ const Billing = () => {
                 </tr>
               </thead>
               <tbody>
-                {transactions.map((transaction, index) => (
+                {isLoadingTransactions ? (
+                  <tr>
+                    <td colSpan="4" className="py-8 text-center text-gray-500">
+                      Loading transactions...
+                    </td>
+                  </tr>
+                ) : transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="py-8 text-center text-gray-500">
+                      No transactions yet
+                    </td>
+                  </tr>
+                ) : (
+                  transactions.map((transaction, index) => (
                   <tr
                     key={index}
                     className="border-b border-gray-100 hover:bg-gray-50"
@@ -395,7 +469,8 @@ const Billing = () => {
                       {transaction.balance.toLocaleString()}
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>
