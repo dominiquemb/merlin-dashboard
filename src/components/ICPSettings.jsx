@@ -393,14 +393,14 @@ const ICPSettings = () => {
         </div>
       </div>
 
-      {/* Section 2: ICP Analysis */}
+      {/* Section 2: ICP Focus */}
       <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-        {/* ICP Analysis Toggle */}
+        {/* ICP Focus Toggle */}
         <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
           <div className="flex items-center gap-3">
             <FiTarget className="w-5 h-5 text-green-600" />
             <div>
-              <h3 className="font-semibold text-gray-900">ICP Analysis</h3>
+              <h3 className="font-semibold text-gray-900">ICP Focus</h3>
               <p className="text-sm text-gray-600">Include Ideal Customer Profile analysis in reports</p>
             </div>
           </div>

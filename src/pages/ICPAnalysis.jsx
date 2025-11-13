@@ -30,6 +30,8 @@ const ICPAnalysis = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [icpFitMeetings, setIcpFitMeetings] = useState([]);
   const [nonIcpMeetings, setNonIcpMeetings] = useState([]);
+  const [totalNonIcpCount, setTotalNonIcpCount] = useState(0);
+  const [totalAnalyzedCount, setTotalAnalyzedCount] = useState(0);
 
   // Get current week range
   const getWeekRange = () => {
@@ -45,6 +47,30 @@ const ICPAnalysis = () => {
   };
 
   const weekRange = getWeekRange();
+
+  // Fetch total non-ICP count
+  const fetchNonIcpCount = async () => {
+    try {
+      const token = await getAuthToken();
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+      const response = await fetch(`${apiUrl}/icp/stats/non-icp-count`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setTotalNonIcpCount(result.non_icp_count || 0);
+        setTotalAnalyzedCount(result.total_analyzed || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching non-ICP count:', error);
+    }
+  };
 
   // Fetch enriched meetings with ICP analysis
   const fetchMeetingsWithICP = async () => {
@@ -175,11 +201,13 @@ const ICPAnalysis = () => {
         maxScore: 15,
       },
       reasons: fitsIcp ? icpReasons : nonIcpReasons,
+      readyToSend: event.enriched_ready_to_send || false,
     };
   };
 
   useEffect(() => {
     fetchMeetingsWithICP();
+    fetchNonIcpCount();
   }, []);
 
   const handleGenerateAnalysis = async () => {
@@ -206,6 +234,7 @@ const ICPAnalysis = () => {
         setHasEnrichedMeetings(true);
         // Reload meetings to get updated ICP analysis
         await fetchMeetingsWithICP();
+        await fetchNonIcpCount();
       } else {
         if (!result.has_enriched_meetings) {
           setHasEnrichedMeetings(false);
@@ -234,8 +263,8 @@ const ICPAnalysis = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900">ICP Analysis</h1>
-              <CreditsBadge 
+            <h1 className="text-3xl font-bold text-gray-900">ICP Focus</h1>
+              <CreditsBadge
                 text="1 credit/analysis"
                 icon={<FiCreditCard />}
               />
@@ -246,13 +275,36 @@ const ICPAnalysis = () => {
               className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FiRefreshCw className={`w-5 h-5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              {isAnalyzing ? 'Analyzing...' : 'Generate ICP Analysis'}
+              {isAnalyzing ? 'Analyzing...' : 'Generate ICP Focus'}
             </button>
           </div>
           <p className="text-gray-600">
             Review upcoming meetings with low alignment to your Ideal Customer Profile
           </p>
         </div>
+
+        {/* Non-ICP Tracker */}
+        {totalAnalyzedCount > 0 && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 rounded-xl p-6 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                <FiAlertCircle className="w-8 h-8 text-white" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                  Non-ICP Meetings Identified
+                </h2>
+                <p className="text-lg text-gray-700 mb-2">
+                  <span className="font-bold text-purple-700 text-2xl">{totalNonIcpCount}</span>{' '}
+                  <span className="text-gray-600">non-ICP meetings identified out of {totalAnalyzedCount} analyzed to date</span>
+                </p>
+                <p className="text-sm text-gray-600">
+                  This tracker shows the cumulative count of all meetings that don't match your ICP criteria
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* No Enriched Meetings Message */}
         {!hasEnrichedMeetings && (
@@ -389,10 +441,10 @@ const ICPAnalysis = () => {
               <FiAlertCircle className="w-8 h-8 text-blue-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No ICP Analysis Available
+              No ICP Focus Available
             </h3>
             <p className="text-gray-600 mb-4">
-              Click "Generate ICP Analysis" to analyze your upcoming meetings against your Ideal Customer Profile.
+              Click "Generate ICP Focus" to analyze your upcoming meetings against your Ideal Customer Profile.
             </p>
           </div>
         )}

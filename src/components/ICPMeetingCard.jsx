@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiClock, FiMapPin, FiUsers, FiAlertCircle, FiBriefcase } from 'react-icons/fi';
+import { FiClock, FiMapPin, FiUsers, FiAlertCircle, FiBriefcase, FiCheck } from 'react-icons/fi';
 
 const ICPMeetingCard = ({ meeting }) => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -22,6 +22,16 @@ const ICPMeetingCard = ({ meeting }) => {
               <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium">
                 Low ICP Match
               </span>
+            )}
+            {meeting.readyToSend ? (
+              <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+                <FiCheck className="w-3 h-3" />
+                Verified
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+                Pending Verification
+              </div>
             )}
           </div>
 
@@ -60,16 +70,6 @@ const ICPMeetingCard = ({ meeting }) => {
             </div>
           </div>
         </div>
-
-        {/* ICP Score */}
-        {meeting.icpScore && (
-          <div className={`ml-4 rounded-lg px-4 py-2 ${isIcpFit ? 'bg-green-50 border-2 border-green-200' : 'bg-red-50 border-2 border-red-200'}`}>
-            <div className="text-center">
-              <div className={`text-2xl font-bold ${isIcpFit ? 'text-green-600' : 'text-red-600'}`}>{meeting.icpScore.score}</div>
-              <div className={`text-xs ${isIcpFit ? 'text-green-600' : 'text-red-600'}`}>/ {meeting.icpScore.maxScore}</div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Reasons Section */}

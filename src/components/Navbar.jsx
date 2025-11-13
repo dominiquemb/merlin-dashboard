@@ -126,7 +126,7 @@ const Navbar = () => {
                     className="block px-4 py-2 text-sm text-neutral-700 hover:bg-accent-light"
                     onClick={() => setIsPreMeetingOpen(false)}
                   >
-                    ICP analysis
+                    ICP Focus
                   </Link>
                 </div>
               )}
