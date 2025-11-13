@@ -137,6 +137,12 @@ const Navbar = () => {
             >
               Data enrichment
             </Link>
+            <Link
+              to="/icp-settings"
+              className="text-neutral-800 hover:text-neutral-800 transition font-medium"
+            >
+              Settings
+            </Link>
             <Link to="/services" className="text-neutral-800 hover:text-neutral-800 transition font-medium">
               Services
             </Link>
@@ -205,7 +211,7 @@ const Navbar = () => {
                   className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-neutral-700 hover:bg-accent-light transition"
                 >
                   <FiSettings className="w-4 h-4 text-neutral-600" />
-                  <span>Settings</span>
+                  <span>User settings</span>
                 </Link>
                 <Link
                   to="/billing"

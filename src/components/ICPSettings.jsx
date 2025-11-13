@@ -19,11 +19,11 @@ const getAuthToken = async () => {
 };
 
 const ICPSettings = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [icpAnalysisEnabled, setIcpAnalysisEnabled] = useState(true);
+  const [icpCriteriaExpanded, setIcpCriteriaExpanded] = useState(false);
   const [deliveryChannels, setDeliveryChannels] = useState({
     email: true,
     slack: false,
@@ -196,9 +196,11 @@ const ICPSettings = () => {
               console.log('Set yearsFounded state to:', mappedYears);
             }
             
-            if (typeof criteria.enabled !== 'undefined') {
-              setIcpAnalysisEnabled(criteria.enabled);
-            }
+                   if (typeof criteria.enabled !== 'undefined') {
+                     setIcpAnalysisEnabled(criteria.enabled);
+                     // Auto-expand criteria section if ICP is enabled
+                     setIcpCriteriaExpanded(criteria.enabled);
+                   }
           }
         }
       } catch (error) {
@@ -262,8 +264,7 @@ const ICPSettings = () => {
         setSaveMessage('✅ Settings saved successfully!');
         setTimeout(() => {
           setSaveMessage('');
-          setIsOpen(false);
-        }, 2000);
+        }, 3000);
       } else {
         setSaveMessage(`❌ ${result.message || 'Failed to save settings'}`);
       }
@@ -277,126 +278,201 @@ const ICPSettings = () => {
   };
 
   return (
-    <div className="mb-8">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-[#fafafa] border border-gray-100 rounded-2xl p-4 flex items-center justify-between hover:bg-gray-50 transition"
-      >
-        <div className="flex items-center gap-3">
-          <FiTarget className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-gray-900">Settings</span>
-        </div>
-        {isOpen ? <FiChevronUp className="w-5 h-5 text-gray-500" /> : <FiChevronDown className="w-5 h-5 text-gray-500" />}
-      </button>
-
-      {isOpen && (
-        <div className="bg-[#fafafa] border border-t-0 border-gray-100 rounded-b-2xl p-6 space-y-8">
-          {/* Send my insights to */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <FiMail className="w-5 h-5 text-purple-600" />
-              <h3 className="font-semibold text-gray-900">Send my insights to</h3>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">Select your preferred delivery channels (multiple allowed)</p>
-
-            <div className="grid grid-cols-3 gap-4">
-              <button
-                onClick={() => setDeliveryChannels(prev => ({ ...prev, email: !prev.email }))}
-                className={`p-4 rounded-lg border-2 transition ${
-                  deliveryChannels.email
-                    ? 'border-primary bg-blue-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <FiMail className="w-6 h-6 mx-auto mb-2 text-gray-700" />
-                <div className="text-sm font-medium text-gray-900">Email</div>
-              </button>
-
-              <button
-                onClick={() => setDeliveryChannels(prev => ({ ...prev, slack: !prev.slack }))}
-                className={`p-4 rounded-lg border-2 transition ${
-                  deliveryChannels.slack
-                    ? 'border-primary bg-blue-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <FiMessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-700" />
-                <div className="text-sm font-medium text-gray-900">Slack</div>
-              </button>
-
-              <button
-                onClick={() => setDeliveryChannels(prev => ({ ...prev, crm: !prev.crm }))}
-                className={`p-4 rounded-lg border-2 transition ${
-                  deliveryChannels.crm
-                    ? 'border-primary bg-blue-50'
-                    : 'border-gray-200 bg-white hover:border-gray-300'
-                }`}
-              >
-                <FiBriefcase className="w-6 h-6 mx-auto mb-2 text-gray-700" />
-                <div className="text-sm font-medium text-gray-900">CRM Integration</div>
-              </button>
-            </div>
+    <div className="space-y-6">
+      {/* Section 1: Send my insights to + Custom Insights */}
+      <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+        {/* Send my insights to */}
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <FiMail className="w-5 h-5 text-purple-600" />
+            <h3 className="font-semibold text-gray-900">Send my insights to</h3>
           </div>
+          <p className="text-sm text-gray-600 mb-4">Select your preferred delivery channels (multiple allowed)</p>
 
-          {/* ICP Analysis Toggle */}
-          <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center gap-3">
-              <FiTarget className="w-5 h-5 text-green-600" />
-              <div>
-                <h3 className="font-semibold text-gray-900">ICP Analysis</h3>
-                <p className="text-sm text-gray-600">Include Ideal Customer Profile analysis in reports</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-3 gap-4">
             <button
-              onClick={() => setIcpAnalysisEnabled(!icpAnalysisEnabled)}
-              className={`relative w-12 h-6 rounded-full transition ${
-                icpAnalysisEnabled ? 'bg-green-600' : 'bg-gray-300'
+              onClick={() => setDeliveryChannels(prev => ({ ...prev, email: !prev.email }))}
+              className={`p-4 rounded-lg border-2 transition ${
+                deliveryChannels.email
+                  ? 'border-primary bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
-              <div
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                  icpAnalysisEnabled ? 'transform translate-x-6' : ''
-                }`}
-              />
+              <FiMail className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+              <div className="text-sm font-medium text-gray-900">Email</div>
+            </button>
+
+            <button
+              onClick={() => setDeliveryChannels(prev => ({ ...prev, slack: !prev.slack }))}
+              className={`p-4 rounded-lg border-2 transition ${
+                deliveryChannels.slack
+                  ? 'border-primary bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <FiMessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+              <div className="text-sm font-medium text-gray-900">Slack</div>
+            </button>
+
+            <button
+              onClick={() => setDeliveryChannels(prev => ({ ...prev, crm: !prev.crm }))}
+              className={`p-4 rounded-lg border-2 transition ${
+                deliveryChannels.crm
+                  ? 'border-primary bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <FiBriefcase className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+              <div className="text-sm font-medium text-gray-900">CRM Integration</div>
             </button>
           </div>
+        </div>
 
-          {/* Define Your Ideal Customer Profile */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-2">Define Your Ideal Customer Profile</h3>
-            <p className="text-sm text-gray-600 mb-4">Set criteria to identify which meetings align with your target customer profile</p>
+        {/* Custom Insights */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <FiZap className="w-5 h-5 text-orange-600" />
+              <h3 className="font-semibold text-gray-900">Custom Insights</h3>
+            </div>
+            <CreditsBadge 
+              text="1 credit/question"
+              icon={<FiCreditCard />}
+            />
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Select questions to answer for your meetings</p>
 
-            <div className="space-y-4">
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                  <FiBriefcase className="w-4 h-4" />
-                  Number of Employees (select all that apply)
-                </label>
-                {console.log('Rendering employee checkboxes, employeeRanges state:', employeeRanges)}
+          <div className="mb-4">
+            <span className="bg-yellow-500 text-white text-sm px-3 py-1 rounded-full font-medium">
+              {getTotalSelectedCount()} selected
+            </span>
+          </div>
+
+          <div className="space-y-6">
+            {Object.entries(questionCategories).map(([key, category]) => (
+              <div key={key}>
+                <div className="flex items-center gap-2 mb-3">
+                  <h4 className="font-semibold text-gray-900">{category.label}</h4>
+                  <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+                    {category.count} questions
+                  </span>
+                </div>
                 <div className="space-y-2">
-                  {['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001+'].map(range => {
-                    const isChecked = employeeRanges.includes(range);
-                    console.log(`Checkbox ${range}: checked=${isChecked}, employeeRanges=`, employeeRanges);
-                    return (
-                      <label key={range} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setEmployeeRanges([...employeeRanges, range]);
-                            } else {
-                              setEmployeeRanges(employeeRanges.filter(r => r !== range));
-                            }
-                          }}
-                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                        />
-                        <span className="text-sm text-gray-700">{range} employees</span>
-                      </label>
-                    );
-                  })}
+                  {category.questions.map((question, idx) => (
+                    <label
+                      key={idx}
+                      className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(selectedQuestions[key] || []).includes(question)}
+                        onChange={() => toggleQuestion(key, question)}
+                        className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <span className="text-sm text-gray-700">{question}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
+            ))}
+
+            {/* Add Custom Question */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Add Your Own Custom Question
+              </label>
+              <input
+                type="text"
+                value={customQuestion}
+                onChange={(e) => setCustomQuestion(e.target.value)}
+                placeholder="e.g., What are the prospect's recent LinkedIn posts about?"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2: ICP Analysis */}
+      <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+        {/* ICP Analysis Toggle */}
+        <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
+          <div className="flex items-center gap-3">
+            <FiTarget className="w-5 h-5 text-green-600" />
+            <div>
+              <h3 className="font-semibold text-gray-900">ICP Analysis</h3>
+              <p className="text-sm text-gray-600">Include Ideal Customer Profile analysis in reports</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const newState = !icpAnalysisEnabled;
+              setIcpAnalysisEnabled(newState);
+              setIcpCriteriaExpanded(newState);
+            }}
+            className={`relative w-12 h-6 rounded-full transition ${
+              icpAnalysisEnabled ? 'bg-green-600' : 'bg-gray-300'
+            }`}
+          >
+            <div
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                icpAnalysisEnabled ? 'transform translate-x-6' : ''
+              }`}
+            />
+          </button>
+        </div>
+
+        {/* Collapsible ICP Criteria Section */}
+        {icpAnalysisEnabled && (
+          <div className="mt-4">
+            <button
+              onClick={() => setIcpCriteriaExpanded(!icpCriteriaExpanded)}
+              className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+            >
+              <div className="flex items-center gap-2">
+                <FiTarget className="w-4 h-4 text-gray-600" />
+                <span className="font-medium text-gray-900">Define Your Ideal Customer Profile</span>
+              </div>
+              {icpCriteriaExpanded ? (
+                <FiChevronUp className="w-5 h-5 text-gray-500" />
+              ) : (
+                <FiChevronDown className="w-5 h-5 text-gray-500" />
+              )}
+            </button>
+
+            {icpCriteriaExpanded && (
+              <div className="mt-4 space-y-4 p-4 bg-white border border-gray-200 rounded-lg">
+                <p className="text-sm text-gray-600 mb-4">Set criteria to identify which meetings align with your target customer profile</p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <FiBriefcase className="w-4 h-4" />
+                      Number of Employees (select all that apply)
+                    </label>
+                    <div className="space-y-2">
+                      {['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001+'].map(range => {
+                        const isChecked = employeeRanges.includes(range);
+                        return (
+                          <label key={range} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setEmployeeRanges([...employeeRanges, range]);
+                                } else {
+                                  setEmployeeRanges(employeeRanges.filter(r => r !== range));
+                                }
+                              }}
+                              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                            />
+                            <span className="text-sm text-gray-700">{range} employees</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
 
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
@@ -424,111 +500,42 @@ const ICPSettings = () => {
                 </div>
               </div>
 
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                  <FiZap className="w-4 h-4" />
-                  Other (Optional)
-                  <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold">Beta</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Additional criteria..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Custom Insights */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <FiZap className="w-5 h-5 text-orange-600" />
-                <h3 className="font-semibold text-gray-900">Custom Insights</h3>
-              </div>
-              <CreditsBadge 
-                text="1 credit/question"
-                icon={<FiCreditCard />}
-              />
-            </div>
-            <p className="text-sm text-gray-600 mb-4">Select questions to answer for your meetings</p>
-
-            <div className="mb-4">
-              <span className="bg-yellow-500 text-white text-sm px-3 py-1 rounded-full font-medium">
-                {getTotalSelectedCount()} selected
-              </span>
-            </div>
-
-            <div className="space-y-6">
-              {Object.entries(questionCategories).map(([key, category]) => (
-                <div key={key}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <h4 className="font-semibold text-gray-900">{category.label}</h4>
-                    <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
-                      {category.count} questions
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {category.questions.map((question, idx) => (
-                      <label
-                        key={idx}
-                        className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={(selectedQuestions[key] || []).includes(question)}
-                          onChange={() => toggleQuestion(key, question)}
-                          className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                        />
-                        <span className="text-sm text-gray-700">{question}</span>
-                      </label>
-                    ))}
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                      <FiZap className="w-4 h-4" />
+                      Other (Optional)
+                      <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold">Beta</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Additional criteria..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    />
                   </div>
                 </div>
-              ))}
-
-              {/* Add Custom Question */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Add Your Own Custom Question
-                </label>
-                <input
-                  type="text"
-                  value={customQuestion}
-                  onChange={(e) => setCustomQuestion(e.target.value)}
-                  placeholder="e.g., What are the prospect's recent LinkedIn posts about?"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-                />
               </div>
-            </div>
+            )}
           </div>
+        )}
+      </div>
 
-          {/* Save Message */}
-          {saveMessage && (
-            <div className={`p-3 rounded-lg ${saveMessage.includes('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-              {saveMessage}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
-              onClick={() => setIsOpen(false)}
-              disabled={isSaving}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveSettings}
-              disabled={isSaving}
-              className="px-6 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50"
-            >
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
+      {/* Save Message */}
+      {saveMessage && (
+        <div className={`p-3 rounded-lg ${saveMessage.includes('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+          {saveMessage}
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex items-center justify-end gap-3">
+        <button
+          onClick={handleSaveSettings}
+          disabled={isSaving}
+          className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50"
+        >
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
     </div>
   );
 };

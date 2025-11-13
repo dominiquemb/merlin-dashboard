@@ -12,6 +12,7 @@ import Signup from "./components/Signup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Meetings from "./pages/Meetings";
 import ICPAnalysis from "./pages/ICPAnalysis";
+import ICPSettingsPage from "./pages/ICPSettings";
 import DataEnrichment from "./pages/DataEnrichment";
 import Services from "./pages/Services";
 import Settings from "./pages/Settings";
@@ -48,6 +49,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ICPAnalysis />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/icp-settings"
+            element={
+              <ProtectedRoute>
+                <ICPSettingsPage />
               </ProtectedRoute>
             }
           />

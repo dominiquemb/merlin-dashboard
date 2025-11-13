@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ICPMeetingCard from '../components/ICPMeetingCard';
-import ICPSettings from '../components/ICPSettings';
 import CreditsBadge from '../components/CreditsBadge';
 import { FiAlertCircle, FiCalendar, FiCreditCard, FiRefreshCw, FiArrowRight } from 'react-icons/fi';
 
@@ -231,11 +230,11 @@ const ICPAnalysis = () => {
       <Navbar />
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Header */}
+        {/* Header with Tabs */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold text-gray-900">ICP Analysis</h1>
+            <h1 className="text-3xl font-bold text-gray-900">ICP Analysis</h1>
               <CreditsBadge 
                 text="1 credit/analysis"
                 icon={<FiCreditCard />}
@@ -300,8 +299,6 @@ const ICPAnalysis = () => {
           </div>
         )}
 
-        {/* Settings */}
-        <ICPSettings />
 
         {/* Loading State */}
         {isLoadingMeetings && (
@@ -343,26 +340,26 @@ const ICPAnalysis = () => {
 
         {/* Non-ICP Meetings Alert Summary */}
         {!isLoadingMeetings && nonIcpMeetings.length > 0 && (
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-6 mb-8">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FiAlertCircle className="w-8 h-8 text-white" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                  Meetings That Don't Fit Your ICP
-                </h2>
-                <p className="text-lg text-gray-700 mb-2">
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-6 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <FiAlertCircle className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">
+                Meetings That Don't Fit Your ICP
+              </h2>
+              <p className="text-lg text-gray-700 mb-2">
                   <span className="font-bold">{nonIcpMeetings.length} meetings</span>{' '}
-                  <span className="text-gray-600">this week</span>
-                </p>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <FiCalendar className="w-4 h-4" />
-                  <span>{weekRange}</span>
-                </div>
+                <span className="text-gray-600">this week</span>
+              </p>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <FiCalendar className="w-4 h-4" />
+                <span>{weekRange}</span>
               </div>
             </div>
           </div>
+        </div>
         )}
 
         {/* Non-ICP Meeting Cards */}
@@ -377,12 +374,12 @@ const ICPAnalysis = () => {
 
         {/* ICP Fit Meeting Cards */}
         {!isLoadingMeetings && icpFitMeetings.length > 0 && (
-          <div className="space-y-4">
+        <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">ICP Fit Meetings</h3>
             {icpFitMeetings.map((meeting) => (
-              <ICPMeetingCard key={meeting.id} meeting={meeting} />
-            ))}
-          </div>
+            <ICPMeetingCard key={meeting.id} meeting={meeting} />
+          ))}
+        </div>
         )}
 
         {/* Empty State (shown when no meetings with ICP analysis) */}
