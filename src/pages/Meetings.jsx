@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import MeetingCard from '../components/MeetingCard';
 import MeetingDetails from '../components/MeetingDetails';
@@ -418,13 +419,27 @@ const Meetings = () => {
     }
   }, [user?.email, loadMeetings]);
 
+  const routerLocation = useLocation();
+  
   useEffect(() => {
+    // Check if there's a selectedMeetingId in navigation state
+    if (routerLocation.state?.selectedMeetingId) {
+      const meetingExists = meetings.find(m => m.id === routerLocation.state.selectedMeetingId);
+      if (meetingExists) {
+        setSelectedMeetingId(routerLocation.state.selectedMeetingId);
+        // Clear the state to avoid reselecting on re-render
+        window.history.replaceState({}, document.title);
+        return;
+      }
+    }
+    
+    // Default: select first meeting if available
     if (meetings.length > 0) {
       setSelectedMeetingId(meetings[0].id);
     } else {
       setSelectedMeetingId(null);
     }
-  }, [meetings]);
+  }, [meetings, routerLocation.state]);
 
   const selectedMeeting = meetings.find((m) => m.id === selectedMeetingId);
 
