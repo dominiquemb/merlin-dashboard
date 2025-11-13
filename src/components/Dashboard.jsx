@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
-import { FiCheckCircle, FiEye, FiClock, FiCalendar, FiUsers, FiMapPin, FiX, FiSend } from 'react-icons/fi';
+import { FiCheckCircle, FiEye, FiClock, FiCalendar, FiUsers, FiMapPin, FiX, FiSend, FiZap, FiVideo, FiTrendingUp, FiArrowRight, FiAward, FiInfo, FiLock, FiTarget } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchCalendarEvents } from '../lib/calendarApi';
 
@@ -20,10 +20,99 @@ const Dashboard = () => {
   const [emailMessage, setEmailMessage] = useState('');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [liveAgentMessage, setLiveAgentMessage] = useState('Mapping stakeholder relationships...');
+  const messageIndexRef = useRef(0);
 
   useEffect(() => {
     loadTodaysMeetings();
   }, []);
+
+  // Live Agent Activity - Rotating contextual messages (UI theatre)
+  useEffect(() => {
+    const formatDateForMessage = (date) => {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow';
+      } else {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+    };
+
+    const getContextualMessages = () => {
+      const messages = [];
+
+      // Context-aware messages based on actual data
+      if (todaysMeetings.length > 0) {
+        const meeting = todaysMeetings[0];
+        messages.push(
+          `Analyzing stakeholders for "${meeting.title.substring(0, 30)}${meeting.title.length > 30 ? '...' : ''}"...`,
+          `Gathering intelligence for ${meeting.attendees?.length || 0} attendee${meeting.attendees?.length !== 1 ? 's' : ''}...`,
+          `Preparing briefing for ${formatDateForMessage(meeting.start)} meeting...`,
+          `Enriching attendee profiles for ${meeting.title.substring(0, 25)}...`
+        );
+      }
+
+      if (stats.meetingsPrepared > 0) {
+        messages.push(
+          `Processing ${stats.meetingsPrepared} meeting brief${stats.meetingsPrepared !== 1 ? 's' : ''}...`,
+          `Generating insights for ${stats.meetingsPrepared} prepared meeting${stats.meetingsPrepared !== 1 ? 's' : ''}...`
+        );
+      }
+
+      if (stats.insightsGenerated > 0) {
+        messages.push(
+          `Compiling ${stats.insightsGenerated} intelligence insight${stats.insightsGenerated !== 1 ? 's' : ''}...`,
+          `Synthesizing ${stats.insightsGenerated} data point${stats.insightsGenerated !== 1 ? 's' : ''}...`
+        );
+      }
+
+      // Generic fallback messages (always available)
+      const genericMessages = [
+        'Mapping stakeholder relationships...',
+        'Analyzing company backgrounds...',
+        'Gathering LinkedIn activity data...',
+        'Compiling executive movement alerts...',
+        'Tracking press mentions and sentiment...',
+        'Building influence maps...',
+        'Identifying decision makers...',
+        'Collecting competitive intelligence...',
+        'Enriching attendee profiles...',
+        'Generating meeting briefs...',
+        'Analyzing buying committee structure...',
+        'Compiling recent company news...',
+        'Processing enrichment data...',
+        'Synthesizing market intelligence...'
+      ];
+
+      return [...messages, ...genericMessages];
+    };
+
+    const messages = getContextualMessages();
+    if (messages.length === 0) return;
+
+    // Reset index when data changes (new messages available)
+    messageIndexRef.current = 0;
+
+    // Set initial message
+    setLiveAgentMessage(messages[messageIndexRef.current]);
+
+    // Rotate messages every 3 seconds
+    const interval = setInterval(() => {
+      // Regenerate messages in case data changed
+      const currentMessages = getContextualMessages();
+      if (currentMessages.length > 0) {
+        messageIndexRef.current = (messageIndexRef.current + 1) % currentMessages.length;
+        setLiveAgentMessage(currentMessages[messageIndexRef.current]);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [todaysMeetings, stats.meetingsPrepared, stats.insightsGenerated]);
 
   const loadTodaysMeetings = async () => {
     setIsLoadingMeetings(true);
@@ -96,7 +185,25 @@ const Dashboard = () => {
   };
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    if (!date) return 'Unknown time';
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+
+    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    
+    if (dateOnly.getTime() === today.getTime()) {
+      return timeStr;
+    } else if (dateOnly.getTime() === tomorrow.getTime()) {
+      return `Tomorrow ${timeStr}`;
+    } else {
+      const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `${dateStr} ${timeStr}`;
+    }
   };
 
   const formatDate = (date) => {
@@ -125,6 +232,90 @@ const Dashboard = () => {
     if (location.includes('meet.google')) return 'Google Meet';
     if (location.includes('teams')) return 'Microsoft Teams';
     return 'Meeting';
+  };
+
+  // Extract company name from meeting title (e.g., "Demo - TechCo" -> "TechCo")
+  const extractCompanyName = (title) => {
+    if (!title) return null;
+    // Common patterns: "Meeting - Company", "Demo: Company", "Company - Meeting"
+    const patterns = [
+      /[-–—]\s*([^-–—]+)$/, // "Meeting - Company"
+      /:\s*([^:]+)$/, // "Meeting: Company"
+      /^([^-–—:]+)\s*[-–—]/, // "Company - Meeting"
+    ];
+    
+    for (const pattern of patterns) {
+      const match = title.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    // Fallback: try to extract capitalized words
+    const words = title.split(/\s+/);
+    const capitalized = words.filter(w => w[0] && w[0] === w[0].toUpperCase() && w.length > 2);
+    return capitalized.length > 0 ? capitalized[0] : null;
+  };
+
+  // Calculate average prep time from meetings prepared
+  // If we have hours saved and meetings prepared, calculate average
+  // Otherwise use a reasonable estimate based on meetings
+  const calculateAvgPrepTime = () => {
+    if (stats.meetingsPrepared > 0 && stats.hoursSaved > 0) {
+      // Convert hours to minutes and divide by meetings
+      const avgMinutes = Math.round((stats.hoursSaved * 60) / stats.meetingsPrepared);
+      return Math.max(1, Math.min(60, avgMinutes)); // Cap between 1-60 mins for display
+    }
+    // Estimate: assume 8-15 mins per meeting on average
+    return stats.meetingsPrepared > 0 ? Math.round(45 / Math.max(1, stats.meetingsPrepared)) + 5 : 8;
+  };
+
+  // Calculate upgrade opportunities data from real meetings
+  const getUpgradeOpportunitiesData = () => {
+    // Find meeting with most attendees for "Map the buying committee"
+    const meetingWithMostAttendees = todaysMeetings.reduce((max, meeting) => {
+      const attendeeCount = meeting.attendees?.length || 0;
+      const maxCount = max.attendees?.length || 0;
+      return attendeeCount > maxCount ? meeting : max;
+    }, todaysMeetings[0] || {});
+
+    const topMeetingAttendees = meetingWithMostAttendees?.attendees?.length || 0;
+    const companyName = extractCompanyName(meetingWithMostAttendees?.title) || 'this deal';
+
+    // Count total unique attendees across all meetings
+    // Attendees can be strings (names or emails) or objects with email property
+    const allUniqueAttendees = new Set();
+    todaysMeetings.forEach(meeting => {
+      meeting.attendees?.forEach(att => {
+        if (typeof att === 'string') {
+          // Clean up attendee string (remove status, email, etc.)
+          const cleaned = att.trim().split(/[(\[]/)[0].trim(); // Remove "(status)" or "[email]"
+          if (cleaned) {
+            allUniqueAttendees.add(cleaned.toLowerCase());
+          }
+        } else if (att?.email) {
+          allUniqueAttendees.add(att.email.toLowerCase());
+        } else if (att?.name) {
+          allUniqueAttendees.add(att.name.toLowerCase());
+        }
+      });
+    });
+    const totalContacts = allUniqueAttendees.size;
+
+    // Get company names for reputation tracking
+    const companyNames = todaysMeetings
+      .map(m => extractCompanyName(m.title))
+      .filter(Boolean);
+    const primaryCompany = companyNames[0] || null;
+
+    return {
+      topMeetingAttendees,
+      companyName,
+      totalContacts,
+      primaryCompany,
+      hasMultipleMeetings: todaysMeetings.length > 1,
+      meetingCount: todaysMeetings.length,
+    };
   };
 
   const handleViewBrief = (meetingId) => {
@@ -250,7 +441,7 @@ const Dashboard = () => {
             </div>
             <div className="flex-1">
               <p className="font-semibold text-gray-900">Live Agent Activity</p>
-              <p className="text-sm text-gray-600">Mapping stakeholder relationships...</p>
+              <p className="text-sm text-gray-600 transition-opacity duration-500">{liveAgentMessage}</p>
             </div>
             <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
               View activity log →
@@ -258,8 +449,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Today's Meetings */}
-        <div className="mb-8">
+        {/* Main Content Grid - Today's Meetings (Left) and Upgrade Opportunities (Right) */}
+        <div className="grid lg:grid-cols-[2fr_1fr] gap-6 mb-8">
+          {/* Left Column: Today's Meetings */}
+          <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Today's Meetings</h2>
           
           {isLoadingMeetings ? (
@@ -278,100 +471,367 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {todaysMeetings.map((meeting) => (
-                <div key={meeting.id} className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">{meeting.title}</h3>
-                        {meeting.enrichmentStatus === 'processed' && (
+                {todaysMeetings.map((meeting) => {
+                  // Format attendee names (assuming they might be strings or objects)
+                  const attendeeNames = meeting.attendees?.slice(0, 2).map(att => {
+                    if (typeof att === 'string') {
+                      // Try to extract name from string format "Name (status)"
+                      return att.split('(')[0].trim();
+                    }
+                    return att?.name || att?.email || 'Unknown';
+                  }) || [];
+                  
+                  // Estimate key insights - show for all meetings per screenshot
+                  const keyInsightsCount = 3; // Always show 3 key insights per screenshot
+                  const premiumInsightsCount = 1; // Always show 1 premium insight per screenshot
+                  const isReady = meeting.enrichmentStatus === 'processed' || meeting.enrichmentStatus === 'ready';
+                  // Calculate ICP Score (placeholder - could be from actual data)
+                  const icpScore = 14; // Placeholder
+
+                  return (
+                    <div key={meeting.id} className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                      {/* Meeting Title */}
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">{meeting.title}</h3>
+
+                      {/* Status Tags */}
+                      <div className="flex items-center gap-2 mb-4">
+                        {isReady ? (
                           <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
                             Ready
                           </span>
+                        ) : (
+                          <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium">
+                            Preparing
+                          </span>
                         )}
+                        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-medium">
+                          ICP Score: {icpScore}/15
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                        <div className="flex items-center gap-1">
+                      {/* Meeting Details - Single Row, Evenly Spaced */}
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
                           <FiClock className="w-4 h-4" />
-                          <span>{formatDate(meeting.start)} • {formatTime(meeting.start)} • {getDuration(meeting.start, meeting.end)}</span>
+                          <span>{formatTime(meeting.start)} • {getDuration(meeting.start, meeting.end)}</span>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <FiMapPin className="w-4 h-4" />
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <FiVideo className="w-4 h-4" />
                           <span>{getPlatform(meeting.location)}</span>
                         </div>
-                        {meeting.attendees && meeting.attendees.length > 0 && (
-                          <div className="flex items-center gap-1">
+                        {attendeeNames.length > 0 ? (
+                          <div className="flex items-center gap-1 text-sm text-gray-600">
                             <FiUsers className="w-4 h-4" />
-                            <span>{meeting.attendees.length} attendee{meeting.attendees.length !== 1 ? 's' : ''}</span>
+                            <span>{attendeeNames.join(', ')}{meeting.attendees?.length > 2 ? `, +${meeting.attendees.length - 2} more` : ''}</span>
                           </div>
+                        ) : (
+                          <div></div>
                         )}
                       </div>
-                    </div>
-                  </div>
 
-                  <button
-                    onClick={() => handleViewBrief(meeting.id)}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-medium transition"
-                  >
-                    View Full Brief
-                  </button>
-                </div>
-              ))}
+                      {/* Insights Info - Single Row */}
+                      <div className="flex items-center gap-4 flex-wrap mb-4">
+                        <div className="flex items-center gap-2 text-sm">
+                          <FiCheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-gray-700">{keyInsightsCount} key insight{keyInsightsCount !== 1 ? 's' : ''} ready</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <FiLock className="w-4 h-4 text-purple-600" />
+                          <span className="text-gray-700">{premiumInsightsCount} premium insight{premiumInsightsCount !== 1 ? 's' : ''} available</span>
+                        </div>
+                      </div>
+
+                      {/* View Full Brief Button */}
+                      <button
+                        onClick={() => handleViewBrief(meeting.id)}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-medium transition"
+                      >
+                        View Full Brief
+                      </button>
+
+                      {/* Unlock Premium Insights Section - Show for all meetings */}
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                          <h4 className="font-semibold text-gray-900 mb-3">Unlock Premium Insights</h4>
+                          <div className="space-y-3">
+                            {/* Stakeholder Map */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <FiUsers className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 mb-1">Stakeholder Map</h4>
+                                  <p className="text-sm text-gray-600">
+                                    See the full buying committee and influence map
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleUnlockInsight('Stakeholder Map')}
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
+                              >
+                                <FiLock className="w-4 h-4" />
+                                <span className="text-sm">Unlock</span>
+                              </button>
+                            </div>
+
+                            {/* Reputation Intelligence */}
+                            <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                  <FiTarget className="w-5 h-5 text-purple-600" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 mb-1">Reputation Intelligence</h4>
+                                  <p className="text-sm text-gray-600">
+                                    Track press mentions, sentiment, and executive moves
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleUnlockInsight('Reputation Intelligence')}
+                                className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
+                              >
+                                <FiLock className="w-4 h-4" />
+                                <span className="text-sm">Unlock</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                  );
+                })}
             </div>
           )}
         </div>
 
-        {/* Unlock Premium Insights */}
-        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Unlock Premium Insights</h3>
-          
-          <div className="space-y-3">
-            {/* Stakeholder Map */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-start gap-3 flex-1">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FiUsers className="w-5 h-5 text-blue-600" />
+          {/* Right Column: Performance Dashboard and Upgrade Opportunities */}
+          <div>
+            {/* Performance Dashboard */}
+            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Performance Dashboard</h2>
+              
+              {/* Overall Performance */}
+              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FiAward className="w-5 h-5 text-gray-600" />
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Stakeholder Map</h4>
-                  <p className="text-sm text-gray-600">
-                    See the full buying committee and influence map
-                  </p>
+                  <p className="font-semibold text-gray-900">Top 10% of AEs</p>
+                  <p className="text-sm text-gray-600">You're outperforming 90% of sales professionals</p>
                 </div>
-              </div>
-              <button
-                onClick={() => handleUnlockInsight('Stakeholder Map')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
-              >
-                <span className="text-sm">🔒</span>
-                <span className="text-sm">Unlock</span>
-              </button>
             </div>
 
-            {/* Reputation Intelligence */}
-            <div className="bg-white border border-gray-100 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-start gap-3 flex-1">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <span className="text-xl">🎯</span>
+              {/* Key Metrics */}
+              <div className="space-y-4 mb-6">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Your avg prep time</p>
+                  <p className="text-2xl font-bold text-gray-900">{calculateAvgPrepTime()} mins</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Reputation Intelligence</h4>
-                  <p className="text-sm text-gray-600">
-                    Track press mentions, sentiment, and executive moves
-                  </p>
+                  <p className="text-sm text-gray-600 mb-1">Industry average</p>
+                  <p className="text-2xl font-bold text-gray-700">45 mins</p>
                 </div>
               </div>
-              <button
-                onClick={() => handleUnlockInsight('Reputation Intelligence')}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
-              >
-                <span className="text-sm">🔒</span>
-                <span className="text-sm">Unlock</span>
-              </button>
+
+              {/* Pro Tip */}
+              <div className="bg-white border border-gray-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FiInfo className="w-4 h-4 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 mb-1">Pro Tip</p>
+                  <p className="text-sm text-gray-600">
+                      AEs using Stakeholder Intelligence close 40% faster. Try it on your next deal.
+                  </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Upgrade Opportunities */}
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <FiZap className="w-6 h-6 text-yellow-500" />
+                <h2 className="text-2xl font-bold text-gray-900">Upgrade Opportunities</h2>
+              </div>
+
+            {(() => {
+              const upgradeData = getUpgradeOpportunitiesData();
+              
+              return (
+                <div className="space-y-4">
+                  {/* Map the buying committee - Show only if we have meetings with attendees */}
+                  {upgradeData.topMeetingAttendees > 0 && (
+                    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FiUsers className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">Map the buying committee</h3>
+                          <p className="text-sm text-gray-600 mb-3">
+                            {upgradeData.companyName !== 'this deal' ? `${upgradeData.companyName} deal` : 'This deal'} involves {upgradeData.topMeetingAttendees} decision-maker{upgradeData.topMeetingAttendees !== 1 ? 's' : ''}. See who influences who. Increase win rate by 40%
+                          </p>
+                          <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                            Learn more <FiArrowRight className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Know who else influences the deal - Show only if we have meetings */}
+                  {upgradeData.meetingCount > 0 && (
+                    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FiTrendingUp className="w-6 h-6 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">Know who else influences the deal</h3>
+                          <p className="text-sm text-gray-600 mb-3">
+                            {upgradeData.hasMultipleMeetings 
+                              ? `You have ${upgradeData.meetingCount} upcoming meeting${upgradeData.meetingCount !== 1 ? 's' : ''}. Identify hidden stakeholders and power dynamics within your target accounts.`
+                              : 'Identify hidden stakeholders and power dynamics within your target accounts.'
+                            }
+                          </p>
+                          <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                            Learn more <FiArrowRight className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Enrich contacts in pipeline - Show only if we have contacts */}
+                  {upgradeData.totalContacts > 0 && (
+                    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FiZap className="w-6 h-6 text-yellow-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">Enrich {upgradeData.totalContacts} contact{upgradeData.totalContacts !== 1 ? 's' : ''} in pipeline</h3>
+                          <p className="text-sm text-gray-600 mb-3">
+                            Missing key data on prospects could slow your deals. Close 2-3 days faster
+                          </p>
+                          <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                            Learn more <FiArrowRight className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Track reputation signals - Show only if we have company names */}
+                  {upgradeData.primaryCompany && (
+                    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <FiTrendingUp className="w-6 h-6 text-orange-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-2">Track the latest moves and stay one step ahead</h3>
+                          <p className="text-sm text-gray-600 mb-3">
+                            Monitor {upgradeData.primaryCompany}'s press, social sentiment, and executive moves. Stay ahead of account changes
+                          </p>
+                          <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                            Learn more <FiArrowRight className="w-4 h-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Fallback messages if no data */}
+                  {upgradeData.meetingCount === 0 && (
+                    <>
+                      {/* Map the buying committee - Generic */}
+                      <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FiUsers className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-2">Map the buying committee</h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              See who influences who in your target accounts. Increase win rate by 40%
+                            </p>
+                            <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                              Learn more <FiArrowRight className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Know who else influences the deal - Generic */}
+                      <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FiTrendingUp className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-2">Know who else influences the deal</h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Identify hidden stakeholders and power dynamics within your target accounts
+                            </p>
+                            <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                              Learn more <FiArrowRight className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Enrich contacts - Generic */}
+                      <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FiZap className="w-6 h-6 text-yellow-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-2">Enrich contacts in pipeline</h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Missing key data on prospects could slow your deals. Close 2-3 days faster
+                            </p>
+                            <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                              Learn more <FiArrowRight className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Track reputation signals - Generic */}
+                      <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                        <div className="flex items-start gap-4">
+                          <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FiTrendingUp className="w-6 h-6 text-orange-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900 mb-2">Track the latest moves and stay one step ahead</h3>
+                            <p className="text-sm text-gray-600 mb-3">
+                              Monitor press, social sentiment, and executive moves. Stay ahead of account changes
+                            </p>
+                            <a href="/services" className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1">
+                              Learn more <FiArrowRight className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Explore All Services Button */}
+                  <a
+                    href="/services"
+                    className="block w-full bg-green-600 hover:bg-green-700 text-white rounded-xl py-3 font-medium transition text-center"
+                  >
+                    Explore All Services
+                  </a>
+                </div>
+              );
+            })()}
             </div>
           </div>
         </div>
