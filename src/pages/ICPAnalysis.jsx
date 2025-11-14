@@ -212,32 +212,54 @@ const ICPAnalysis = () => {
     const endDate = new Date(event.end);
     const duration = Math.round((endDate - startDate) / (1000 * 60)); // minutes
     
+    // Get user email from event (organizer email)
+    const userEmail = event.email || '';
+    const userEmailLower = userEmail?.toLowerCase() || '';
+    
     // Extract attendees - using same approach as Meetings page
-    const extractAttendees = (attendeesValue) => {
+    const extractAttendees = (attendeesValue, userEmail) => {
       if (!attendeesValue || attendeesValue === 'No Attendees') {
         return [];
       }
+      const userEmailLower = userEmail?.toLowerCase() || '';
+      
       if (Array.isArray(attendeesValue)) {
-        return attendeesValue.map(item => {
-          if (typeof item === 'string') {
-            return item.replace(/\s*\(.+?\)$/, '').trim();
-          } else if (item && typeof item === 'object') {
-            return item.name || item.email || '';
-          }
-          return '';
-        }).filter(Boolean);
+        return attendeesValue
+          .map(item => {
+            if (typeof item === 'string') {
+              return item.replace(/\s*\(.+?\)$/, '').trim();
+            } else if (item && typeof item === 'object') {
+              return item.name || item.email || '';
+            }
+            return '';
+          })
+          .filter(Boolean)
+          .filter(item => {
+            // Extract email from string if present
+            const emailMatch = item.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+            const itemEmail = emailMatch ? emailMatch[0].toLowerCase() : item.toLowerCase();
+            // Filter out the user's email
+            return itemEmail !== userEmailLower;
+          });
       }
       if (typeof attendeesValue === 'string') {
         return attendeesValue
           .split(';')
           .map((item) => item.trim())
           .filter(Boolean)
-          .map((item) => item.replace(/\s*\(.+?\)$/, ''));
+          .map((item) => item.replace(/\s*\(.+?\)$/, ''))
+          .filter(item => {
+            // Extract email from string if present
+            const emailMatch = item.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+            const itemEmail = emailMatch ? emailMatch[0].toLowerCase() : item.toLowerCase();
+            // Filter out the user's email
+            return itemEmail !== userEmailLower;
+          });
       }
       return [];
     };
 
-    const attendeesList = extractAttendees(event.attendees);
+    const attendeesList = extractAttendees(event.attendees, userEmail);
     const attendees = attendeesList.map(name => {
         const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
       return { name, initials };
@@ -508,13 +530,10 @@ const ICPAnalysis = () => {
       });
     }
     
-    // Extract platform from location
-    let platform = 'Meeting';
-    if (event.location) {
-      if (event.location.includes('zoom')) platform = 'Zoom';
-      else if (event.location.includes('meet.google')) platform = 'Google Meet';
-      else if (event.location.includes('teams')) platform = 'Microsoft Teams';
-    }
+    // Use location as platform (will display Google Meet URL if it exists)
+    const platform = event.location && typeof event.location === 'string' && event.location.trim() && event.location !== 'No Location'
+      ? event.location 
+      : 'Meeting';
     
     // Calculate ICP score from reasons (12+ = high fit, 7-11 = medium fit, <7 = low fit)
     // Score is based on: base 12 points for fitting, +1 per matching criteria (max 3 bonus = 15 total)

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiClock, FiUsers, FiCheckCircle, FiX } from 'react-icons/fi';
+import { FiClock, FiUsers, FiCheckCircle, FiX, FiVideo } from 'react-icons/fi';
 
 const ICPMeetingCard = ({ meeting }) => {
   const navigate = useNavigate();
@@ -122,10 +122,14 @@ const ICPMeetingCard = ({ meeting }) => {
       </div>
 
       {/* Meeting Details - Single Row, Evenly Spaced */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="flex items-center gap-1 text-sm text-gray-600">
           <FiClock className="w-4 h-4" />
           <span>{formatDate(meeting.date)} {meeting.time}</span>
+        </div>
+        <div className="flex items-center gap-1 text-sm text-gray-600">
+          <FiVideo className="w-4 h-4" />
+          <span>{meeting.platform || 'Meeting'}</span>
         </div>
         <div className="flex items-center gap-1 text-sm text-gray-600">
           <FiUsers className="w-4 h-4" />

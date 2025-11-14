@@ -323,7 +323,7 @@ const MeetingDetails = ({ meeting }) => {
                 <p className="text-gray-500 uppercase tracking-wide text-xs mb-1">Location</p>
                 <p className="flex items-center gap-2">
                   <FiMapPin className="w-4 h-4 text-gray-500" />
-                  <span>{platform}</span>
+                  <span>{platform || rawEvent?.location || 'No location specified'}</span>
                 </p>
               </div>
               <div>

@@ -48,16 +48,31 @@ export const syncUserCalendar = async (daysAhead = 7) => {
     console.log('✅ [Calendar API] Auth token obtained');
     console.log('🔄 [Calendar API] Sending POST request to:', `${API_URL}/calendar/sync`);
     
-    const response = await fetch(`${API_URL}/calendar/sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        days_ahead: daysAhead,
-      }),
-    });
+    // Create an AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minute timeout
+    
+    let response;
+    try {
+      response = await fetch(`${API_URL}/calendar/sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          days_ahead: daysAhead,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout - sync is taking too long. Please check backend logs.');
+      }
+      throw error;
+    }
 
     console.log('📡 [Calendar API] Response received:', { 
       status: response.status, 

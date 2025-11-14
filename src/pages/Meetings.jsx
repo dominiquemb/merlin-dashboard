@@ -37,16 +37,25 @@ const calculateDurationLabel = (start, end) => {
   return `${hours} hr${hours > 1 ? 's' : ''}${remaining ? ` ${remaining} min` : ''}`;
 };
 
-const extractAttendees = (attendeesValue) => {
+const extractAttendees = (attendeesValue, userEmail) => {
   if (!attendeesValue || attendeesValue === 'No Attendees') {
     return [];
   }
 
+  const userEmailLower = userEmail?.toLowerCase() || '';
+  
   return attendeesValue
     .split(';')
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item) => item.replace(/\s*\(.+?\)$/, ''));
+    .map((item) => item.replace(/\s*\(.+?\)$/, ''))
+    .filter((item) => {
+      // Extract email from string if present (format: "Name (email@domain.com)" or "email@domain.com")
+      const emailMatch = item.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+      const itemEmail = emailMatch ? emailMatch[0].toLowerCase() : item.toLowerCase();
+      // Filter out the user's email
+      return itemEmail !== userEmailLower;
+    });
 };
 
 const createInitials = (name = '') => {
@@ -149,7 +158,7 @@ const collectInsightsFromObject = (value) => {
   return [];
 };
 
-const augmentMeetingWithEnrichment = (event, meeting) => {
+const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
   const enrichedSource = event.enriched_source || event.enrichedSource;
   const briefingSource = event.briefing_source || event.briefingSource;
 
@@ -159,6 +168,7 @@ const augmentMeetingWithEnrichment = (event, meeting) => {
 
   const enrichedCompanies = enrichedSource?.companies || {};
   const briefingCompanies = briefingSource?.companies || {};
+  const userEmailLower = userEmail?.toLowerCase() || '';
 
   const attendeeDetails = [];
   const insights = new Set(meeting.insights || []);
@@ -223,16 +233,37 @@ const augmentMeetingWithEnrichment = (event, meeting) => {
             .join(' ')
       ) || 'Unknown attendee';
 
-      const email = normalizeText(
-        enrichedMatch?.email_address || attendee?.profile?.email || attendee?.email || ''
-      );
-
       const linkedinUrl =
         attendee?.linkedin_url ||
         attendee?.profile?.name?.linkedin_url ||
         enrichedMatch?.linkedin_url ||
         enrichedMatch?.linkedInUrl ||
         '';
+
+      const email = normalizeText(
+        enrichedMatch?.email_address || attendee?.profile?.email || attendee?.email || ''
+      );
+
+      // Filter out the user's own email - but be careful: sometimes the user's email gets incorrectly
+      // associated with attendees during enrichment. Only filter if we're very confident it's the user.
+      // If the attendee has a LinkedIn URL, they're likely a real attendee even if email matches user's email
+      if (email && userEmailLower) {
+        const emailLower = email.toLowerCase();
+        if (emailLower === userEmailLower) {
+          // Only filter if there's no LinkedIn URL (which would indicate it's a real attendee profile)
+          // AND if the fullName is just the email address (indicating it's the user, not a real attendee)
+          const hasLinkedInUrl = linkedinUrl && linkedinUrl.trim();
+          const fullNameLower = fullName.toLowerCase();
+          const emailAsName = emailLower === fullNameLower || fullNameLower === emailLower.replace('@', ' ');
+          
+          // If it has a LinkedIn URL, keep it - it's a real attendee with possibly incorrect email
+          // If there's no LinkedIn URL and the name is just the email, it's likely the user
+          if (!hasLinkedInUrl && emailAsName) {
+            return; // Skip this attendee - it's likely the user
+          }
+          // Otherwise keep it - it might be a real attendee with incorrect email association
+        }
+      }
 
       if (Array.isArray(attendee?.similarities)) {
         attendee.similarities.forEach((similarity) => {
@@ -322,12 +353,23 @@ const augmentMeetingWithEnrichment = (event, meeting) => {
   return meeting;
 };
 
-const transformEventsToMeetings = (events = []) => {
+const transformEventsToMeetings = (events = [], userEmail) => {
   return events
     .map((event) => {
       const startDate = parseDateTime(event.start);
       const endDate = parseDateTime(event.end);
-      const attendeesList = extractAttendees(event.attendees);
+      const attendeesList = extractAttendees(event.attendees, userEmail);
+
+      // Debug: Log location to see what we're getting
+      if (event.location) {
+        console.log('[Meetings] Event location:', {
+          event_id: event.event_id,
+          location: event.location,
+          locationType: typeof event.location,
+          locationTrimmed: typeof event.location === 'string' ? event.location.trim() : 'N/A',
+          isNoLocation: event.location === 'No Location',
+        });
+      }
 
       const meeting = {
         id: event.event_id,
@@ -336,10 +378,17 @@ const transformEventsToMeetings = (events = []) => {
           ? `${formatDateLabel(startDate)} • ${formatTimeLabel(startDate)}`
           : 'Scheduled time unavailable',
         duration: calculateDurationLabel(startDate, endDate),
-        platform:
-          event.location && event.location !== 'No Location'
-            ? event.location
-            : 'No location specified',
+        platform: (() => {
+          // Try to get location from event, checking multiple possible locations
+          const location = event.location || event.rawEvent?.location || null;
+          if (location && typeof location === 'string') {
+            const trimmed = location.trim();
+            if (trimmed && trimmed !== 'No Location' && trimmed !== 'No location') {
+              return trimmed;
+            }
+          }
+          return 'No location specified';
+        })(),
         type: attendeesList.length > 0 ? 'external' : 'internal',
         attendees: attendeesList.length > 0 ? attendeesList : ['Just you'],
         attendeeDetails: [],
@@ -360,7 +409,7 @@ const transformEventsToMeetings = (events = []) => {
         readyToSend: event.enriched_ready_to_send || false,
       };
 
-      return augmentMeetingWithEnrichment(event, meeting);
+      return augmentMeetingWithEnrichment(event, meeting, userEmail);
     })
     .sort((a, b) => {
       const aTime = a.startDate ? a.startDate.getTime() : Number.MAX_SAFE_INTEGER;
@@ -399,7 +448,7 @@ const Meetings = () => {
         return;
       }
 
-      const transformed = transformEventsToMeetings(response.data?.events || []);
+      const transformed = transformEventsToMeetings(response.data?.events || [], user.email);
       setMeetings(transformed);
     } catch (error) {
       console.error('❌ [Meetings] Failed to load meetings:', error);
@@ -482,18 +531,24 @@ const Meetings = () => {
       return;
     }
 
+    console.log('🔄 [Meetings] Sync button clicked, starting sync...');
     setIsSyncing(true);
     setSyncStatus(null);
     setSyncMessage('');
 
     try {
+      console.log('🔄 [Meetings] Calling syncUserCalendar...');
       const result = await syncUserCalendar(7);
+      console.log('📡 [Meetings] Sync result:', result);
 
       if (result.success) {
         const eventsCount = result.data.events_synced || 0;
         setSyncStatus('success');
         setSyncMessage(`Synced ${eventsCount} meeting${eventsCount !== 1 ? 's' : ''}!`);
-        await loadMeetings();
+        // Wait a moment for database to be ready, then reload
+        setTimeout(async () => {
+          await loadMeetings();
+        }, 500);
 
         setTimeout(() => {
           setSyncStatus(null);

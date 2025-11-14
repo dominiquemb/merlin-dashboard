@@ -3,7 +3,7 @@ import { FiClock, FiMapPin, FiUsers, FiCheck } from 'react-icons/fi';
 
 const MeetingCard = ({ meeting, isSelected, onClick }) => {
   const getTypeColor = (type) => {
-    return type === 'external' ? 'bg-gray-900' : 'bg-yellow-500';
+    return type === 'external' ? 'bg-gray-900' : 'bg-orange-600';
   };
 
   const getTypeText = (type) => {
@@ -19,38 +19,40 @@ const MeetingCard = ({ meeting, isSelected, onClick }) => {
           : 'border-gray-100 bg-[#fafafa] hover:border-gray-200'
       }`}
     >
-      {/* Header with title and badges */}
-      <div className="flex items-start justify-between gap-4 mb-4">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-neutral-800 mb-3 text-lg">{meeting.title}</h3>
-          <div className="flex items-center gap-2 text-sm text-neutral-600">
-            <FiClock className="w-4 h-4 flex-shrink-0" />
-            <span>{meeting.time}</span>
-            <span>•</span>
-            <span>{meeting.duration}</span>
+      {/* Status Badges - Top Right on Separate Row */}
+      <div className="flex items-center justify-end gap-2 mb-3 w-full">
+        {meeting.readyToSend ? (
+          <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+            <FiCheck className="w-3 h-3" />
+            Verified
           </div>
-        </div>
-        <div className="flex gap-2 flex-shrink-0">
-          {meeting.readyToSend ? (
-            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
-              <FiCheck className="w-3 h-3" />
-              Verified
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
-              Pending Verification
-            </div>
-          )}
+        ) : (
+          <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
+            Pending Verification
+          </div>
+        )}
+        {meeting.type && (
           <span className={`${getTypeColor(meeting.type)} text-white px-3 py-1 rounded text-xs font-medium whitespace-nowrap`}>
             {getTypeText(meeting.type)}
           </span>
-        </div>
+        )}
+      </div>
+
+      {/* Title - Full Width */}
+      <h3 className="font-semibold text-neutral-800 mb-3 text-lg w-full">{meeting.title}</h3>
+
+      {/* Date and Time Row */}
+      <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
+        <FiClock className="w-4 h-4 flex-shrink-0" />
+        <span>{meeting.time}</span>
+        <span>•</span>
+        <span>{meeting.duration}</span>
       </div>
 
       {/* Platform */}
       <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
         <FiMapPin className="w-4 h-4" />
-        <span>{meeting.platform}</span>
+        <span>{meeting.platform || meeting.rawEvent?.location || 'No location specified'}</span>
       </div>
 
       {/* Attendees */}

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
-import { FiMail, FiDownload, FiUpload, FiFileText, FiCode, FiCreditCard, FiInfo, FiKey, FiEye, FiEyeOff, FiCopy, FiTrash2, FiPlus, FiX } from 'react-icons/fi';
+import { FiMail, FiDownload, FiUpload, FiFileText, FiCode, FiCreditCard, FiInfo, FiKey, FiCopy, FiTrash2, FiPlus, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
+import { uploadCsvForEnrichment, getEnrichmentJobs, downloadEnrichedCsv } from '../lib/enrichmentApi';
+import { generateApiKey, listApiKeys, toggleApiKey, deleteApiKey } from '../lib/apiKeysApi';
 
 const DataEnrichment = () => {
   const [activeTab, setActiveTab] = useState('csv');
@@ -8,18 +10,13 @@ const DataEnrichment = () => {
   const [email, setEmail] = useState('');
   const [showGenerateKeyModal, setShowGenerateKeyModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
-  const [apiKeys, setApiKeys] = useState([
-    {
-      id: 1,
-      name: 'Production API Key',
-      key: 'mk_live_12••••••••••••••••••wxyz',
-      fullKey: 'mk_live_12a3b4c5d6e7f8g9h0i1j2wxyz',
-      created: 'Oct 15, 2025',
-      lastUsed: '2 hours ago',
-      isActive: true,
-      isVisible: false,
-    },
-  ]);
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichmentSuccess, setEnrichmentSuccess] = useState(null);
+  const [enrichmentError, setEnrichmentError] = useState(null);
+  const [recentJobs, setRecentJobs] = useState([]);
+  const [apiKeys, setApiKeys] = useState([]);
+  const [isLoadingApiKeys, setIsLoadingApiKeys] = useState(false);
+  const [newApiKey, setNewApiKey] = useState(null); // Store newly generated key temporarily
 
   // Pre-select some fields
   const [selectedFields, setSelectedFields] = useState([
@@ -69,64 +66,197 @@ const DataEnrichment = () => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
+      // Clear previous messages when new file is uploaded
+      setEnrichmentSuccess(null);
+      setEnrichmentError(null);
     }
   };
 
-  const handleStartEnrichment = () => {
-    console.log('Starting enrichment with fields:', selectedFields);
-    console.log('Email:', email);
-    console.log('File:', uploadedFile);
+  const handleStartEnrichment = async () => {
+    if (!uploadedFile || selectedFields.length === 0 || !email) {
+      return;
+    }
+
+    setIsEnriching(true);
+    setEnrichmentSuccess(null);
+    setEnrichmentError(null);
+
+    try {
+      const result = await uploadCsvForEnrichment(
+        uploadedFile,
+        selectedFields,
+        email
+      );
+
+      setEnrichmentSuccess(result.message);
+
+      // Reset form
+      setUploadedFile(null);
+
+      // Refresh recent jobs
+      fetchRecentJobs();
+
+      // Clear success message after 10 seconds
+      setTimeout(() => {
+        setEnrichmentSuccess(null);
+      }, 10000);
+    } catch (error) {
+      setEnrichmentError(error.message || 'Failed to start enrichment');
+
+      // Clear error message after 10 seconds
+      setTimeout(() => {
+        setEnrichmentError(null);
+      }, 10000);
+    } finally {
+      setIsEnriching(false);
+    }
+  };
+
+  const fetchRecentJobs = async () => {
+    try {
+      const jobs = await getEnrichmentJobs(10);
+      setRecentJobs(jobs);
+    } catch (error) {
+      console.error('Failed to fetch recent jobs:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Load recent jobs when CSV tab is active
+    if (activeTab === 'csv') {
+      fetchRecentJobs();
+    }
+    // Load API keys when API tab is active
+    if (activeTab === 'api') {
+      fetchApiKeys();
+    }
+  }, [activeTab]);
+
+  // Auto-refresh jobs every 30 seconds if there are active jobs
+  useEffect(() => {
+    if (activeTab !== 'csv') return;
+
+    const hasActiveJobs = recentJobs.some(job => ['pending', 'processing'].includes(job.status));
+
+    if (!hasActiveJobs) return;
+
+    const intervalId = setInterval(() => {
+      fetchRecentJobs();
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [activeTab, recentJobs]);
+
+  const fetchApiKeys = async () => {
+    setIsLoadingApiKeys(true);
+    try {
+      const keys = await listApiKeys();
+      // Transform backend format to frontend format
+      const transformedKeys = keys.map(key => ({
+        id: key.id,
+        name: key.name,
+        key: key.key_prefix,
+        fullKey: key.key_prefix, // Only the prefix is available after creation
+        created: new Date(key.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        lastUsed: key.last_used_at ? formatTimeAgo(new Date(key.last_used_at)) : 'Never',
+        isActive: key.is_active,
+      }));
+      setApiKeys(transformedKeys);
+    } catch (error) {
+      console.error('Failed to fetch API keys:', error);
+    } finally {
+      setIsLoadingApiKeys(false);
+    }
+  };
+
+  const formatTimeAgo = (date) => {
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
   };
 
   const handleGenerateKey = () => {
     setShowGenerateKeyModal(true);
+    setNewApiKey(null); // Clear any previous new key
   };
 
-  const handleCreateKey = () => {
+  const handleCreateKey = async () => {
     if (!newKeyName.trim()) return;
 
-    const fullKey = `mk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-    const maskedKey = `${fullKey.substring(0, 10)}••••••••••••••••••${fullKey.substring(fullKey.length - 4)}`;
+    try {
+      const result = await generateApiKey(newKeyName);
 
-    const newKey = {
-      id: apiKeys.length + 1,
-      name: newKeyName,
-      key: maskedKey,
-      fullKey: fullKey,
-      created: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      lastUsed: 'Never',
-      isActive: true,
-      isVisible: false,
-    };
-    setApiKeys([...apiKeys, newKey]);
-    setShowGenerateKeyModal(false);
-    setNewKeyName('');
+      // Store the full API key to show it
+      // Full keys are now stored encrypted in the database, so we don't need localStorage
+      setNewApiKey(result.api_key);
+
+      // Refresh the API keys list
+      await fetchApiKeys();
+
+      setNewKeyName('');
+      // Don't close modal yet - show the new key first
+    } catch (error) {
+      console.error('Failed to generate API key:', error);
+      alert('Failed to generate API key: ' + error.message);
+    }
   };
 
   const handleCancelGenerateKey = () => {
     setShowGenerateKeyModal(false);
     setNewKeyName('');
-  };
-
-  const toggleKeyVisibility = (id) => {
-    setApiKeys(apiKeys.map(key =>
-      key.id === id ? { ...key, isVisible: !key.isVisible } : key
-    ));
+    setNewApiKey(null);
   };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    // You could add a toast notification here
+    // Show a brief success message (you could use a toast library here)
+    alert('API key copied to clipboard!');
   };
 
-  const toggleKeyStatus = (id) => {
-    setApiKeys(apiKeys.map(key =>
-      key.id === id ? { ...key, isActive: !key.isActive } : key
-    ));
+  const toggleKeyStatus = async (id) => {
+    const key = apiKeys.find(k => k.id === id);
+    if (!key) return;
+
+    try {
+      await toggleApiKey(id, !key.isActive);
+      // Update local state optimistically
+      setApiKeys(apiKeys.map(k =>
+        k.id === id ? { ...k, isActive: !k.isActive } : k
+      ));
+    } catch (error) {
+      console.error('Failed to toggle API key:', error);
+      alert('Failed to toggle API key: ' + error.message);
+    }
   };
 
-  const deleteKey = (id) => {
-    setApiKeys(apiKeys.filter(key => key.id !== id));
+  const deleteKey = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this API key? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await deleteApiKey(id);
+      setApiKeys(apiKeys.filter(key => key.id !== id));
+    } catch (error) {
+      console.error('Failed to delete API key:', error);
+      alert('Failed to delete API key: ' + error.message);
+    }
+  };
+
+  const handleDownloadCsv = async (jobId, filename) => {
+    try {
+      const enrichedFilename = filename.replace('.csv', '_enriched.csv');
+      await downloadEnrichedCsv(jobId, enrichedFilename);
+    } catch (error) {
+      console.error('Failed to download CSV:', error);
+      alert('Failed to download CSV: ' + error.message);
+    }
   };
 
   return (
@@ -176,6 +306,54 @@ const DataEnrichment = () => {
 
         {activeTab === 'csv' && (
           <>
+            {/* Active Jobs Banner */}
+            {recentJobs.filter(job => ['pending', 'processing'].includes(job.status)).length > 0 && (
+              <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-300 rounded-xl flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <div className="relative">
+                    <FiUpload className="w-6 h-6 text-blue-600" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-blue-900 font-semibold text-lg">
+                    {recentJobs.filter(job => ['pending', 'processing'].includes(job.status)).length} Enrichment Job(s) In Progress
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Your data is being enriched.
+                    Your enriched CSV will be emailed to you once processing is complete.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {enrichmentSuccess && (
+              <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl flex items-start gap-3 shadow-sm">
+                <FiCheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-green-900 font-semibold text-lg">{enrichmentSuccess}</p>
+                  <p className="text-sm text-green-700 mt-2">
+                    ✓ Job created successfully<br />
+                    ✓ Credits deducted<br />
+                    ✓ Enrichment will be processed within 15 minutes<br />
+                    ✓ Your enriched CSV will be emailed to you once processing is complete
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {enrichmentError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                <FiAlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-red-800 font-medium">Failed to start enrichment</p>
+                  <p className="text-sm text-red-700 mt-1">{enrichmentError}</p>
+                </div>
+              </div>
+            )}
+
             {/* Upload CSV Section */}
             <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
               <div className="flex items-start gap-3 mb-4">
@@ -324,13 +502,119 @@ const DataEnrichment = () => {
             <div className="flex justify-end">
               <button
                 onClick={handleStartEnrichment}
-                disabled={!uploadedFile || selectedFields.length === 0 || !email}
+                disabled={!uploadedFile || selectedFields.length === 0 || !email || isEnriching}
                 className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <FiDownload className="w-5 h-5" />
-                Start Enrichment
+                {isEnriching ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <FiDownload className="w-5 h-5" />
+                    Start Enrichment
+                  </>
+                )}
               </button>
             </div>
+
+            {/* Recent Jobs */}
+            {recentJobs.length > 0 && (
+              <div className="mt-8 bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-gray-900">Recent Enrichment Jobs</h2>
+                    {recentJobs.filter(job => ['pending', 'processing'].includes(job.status)).length > 0 && (
+                      <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
+                        Auto-refreshing
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={fetchRecentJobs}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                  >
+                    <FiDownload className="w-4 h-4" />
+                    Refresh
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {recentJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className={`flex items-center justify-between p-4 bg-white border-2 rounded-lg transition ${
+                        ['pending', 'processing'].includes(job.status)
+                          ? 'border-blue-300 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <span className="font-medium text-gray-900">{job.original_filename}</span>
+                          <span
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                              job.status === 'completed'
+                                ? 'bg-green-100 text-green-700'
+                                : job.status === 'processing'
+                                ? 'bg-blue-100 text-blue-700'
+                                : job.status === 'failed'
+                                ? 'bg-red-100 text-red-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                            }`}
+                          >
+                            {['pending', 'processing'].includes(job.status) && (
+                              <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
+                            )}
+                            {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {job.total_records} records • {job.credits_charged} credits • {new Date(job.created_at).toLocaleDateString()}
+                        </div>
+                        {['pending', 'processing'].includes(job.status) && (
+                          <div className="mt-2 text-xs text-blue-600 font-medium">
+                            ⏱ Processing... your CSV will be emailed to {job.delivery_email} when complete
+                          </div>
+                        )}
+                        {job.status === 'completed' && (
+                          <div className="mt-2 text-xs text-green-600 font-medium">
+                            ✓ Completed! Your CSV will be emailed to {job.delivery_email} soon
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {job.status === 'completed' && job.processed_records > 0 && (
+                          <>
+                            <div className="text-sm font-medium text-green-600">
+                              ✓ {job.successful_records}/{job.total_records} successful
+                            </div>
+                            <div className="text-sm text-blue-600 font-medium flex items-center gap-2">
+                              <FiMail className="w-4 h-4" />
+                              CSV will be emailed to {job.delivery_email}
+                            </div>
+                            {/* Download button temporarily disabled - CSV will be emailed instead
+                            <button
+                              onClick={() => handleDownloadCsv(job.id, job.original_filename)}
+                              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition"
+                            >
+                              <FiDownload className="w-4 h-4" />
+                              Download CSV
+                            </button>
+                            */}
+                          </>
+                        )}
+                        {job.status === 'failed' && (
+                          <div className="text-sm font-medium text-red-600">
+                            ✗ Failed
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -377,25 +661,9 @@ const DataEnrichment = () => {
                       <tr key={apiKey.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-4 px-4 text-sm text-gray-900">{apiKey.name}</td>
                         <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <code className="text-sm font-mono text-gray-700">
-                              {apiKey.isVisible ? apiKey.fullKey : apiKey.key}
-                            </code>
-                            <button
-                              onClick={() => toggleKeyVisibility(apiKey.id)}
-                              className="text-gray-400 hover:text-gray-600 transition"
-                              title={apiKey.isVisible ? 'Hide key' : 'Show key'}
-                            >
-                              {apiKey.isVisible ? <FiEyeOff className="w-4 h-4" /> : <FiEye className="w-4 h-4" />}
-                            </button>
-                            <button
-                              onClick={() => copyToClipboard(apiKey.fullKey)}
-                              className="text-gray-400 hover:text-gray-600 transition"
-                              title="Copy to clipboard"
-                            >
-                              <FiCopy className="w-4 h-4" />
-                            </button>
-                          </div>
+                          <code className="text-sm font-mono text-gray-700">
+                            {apiKey.key}
+                          </code>
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-600">{apiKey.created}</td>
                         <td className="py-4 px-4 text-sm text-gray-600">{apiKey.lastUsed}</td>
@@ -443,52 +711,118 @@ const DataEnrichment = () => {
                 </div>
               </div>
 
-              {/* Endpoint */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Endpoint</h3>
-                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm">
+              {/* Create Enrichment Request */}
+              <div className="mb-8">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">1. Create Enrichment Request</h3>
+                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm mb-3">
                   <span className="text-green-600 font-semibold">POST</span>{' '}
                   <span className="text-gray-900">https://api.merlin.ai/v1/enrich</span>
                 </div>
-              </div>
 
-              {/* Headers */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Headers</h3>
-                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700 space-y-1">
-                  <div>
-                    <span className="text-accent">Authorization:</span> Bearer YOUR_API_KEY
-                  </div>
-                  <div>
-                    <span className="text-accent">Content-Type:</span> application/json
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Headers</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-1">
+                    <div>
+                      <span className="text-accent">Authorization:</span> Bearer YOUR_API_KEY
+                    </div>
+                    <div>
+                      <span className="text-accent">Content-Type:</span> application/json
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Request Body */}
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Request Body</h3>
-                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700">
-                  <pre className="whitespace-pre">{`{
-  "email": "john@company.com",
-  "linkedin_url": "https://linkedin.com/in/johndoe",
-  "fields": ["person_name", "company_name", "company_industry"]
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Request Body</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
+                    <pre className="whitespace-pre">{`{
+  "email": "john.doe@company.com",
+  "fields": ["person_name", "job_title", "company_name"]
 }`}</pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-2">Response</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
+                    <pre className="whitespace-pre">{`{
+  "status": "pending",
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "Enrichment request queued successfully...",
+  "credits_charged": 1
+}`}</pre>
+                  </div>
                 </div>
               </div>
 
-              {/* Response */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Response</h3>
-                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm text-gray-700">
-                  <pre className="whitespace-pre">{`{
-  "status": "success",
+              {/* Retrieve Results - Commented out: users will be emailed the CSV */}
+              {/* <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">2. Retrieve Enrichment Results</h3>
+                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm mb-3">
+                  <span className="text-blue-600 font-semibold">GET</span>{' '}
+                  <span className="text-gray-900">https://api.merlin.ai/v1/enrich/{'{'}request_id{'}'}</span>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Headers</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
+                    <div>
+                      <span className="text-accent">Authorization:</span> Bearer YOUR_API_KEY
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Response (Pending)</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
+                    <pre className="whitespace-pre">{`{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "pending",
+  "input_email": "john.doe@company.com",
+  "requested_fields": ["person_name", "job_title", "company_name"],
+  "credits_charged": 1,
+  "created_at": "2025-11-13T10:00:00Z",
+  "updated_at": "2025-11-13T10:00:00Z"
+}`}</pre>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-2">Response (Completed)</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
+                    <pre className="whitespace-pre">{`{
+  "request_id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "completed",
+  "input_email": "john.doe@company.com",
+  "requested_fields": ["person_name", "job_title", "company_name"],
+  "credits_charged": 1,
+  "created_at": "2025-11-13T10:00:00Z",
+  "updated_at": "2025-11-13T10:15:00Z",
   "data": {
     "person_name": "John Doe",
-    "company_name": "Acme Corp",
-    "company_industry": "Technology"
+    "job_title": "Senior Software Engineer",
+    "company_name": "Acme Corp"
   }
 }`}</pre>
+                  </div>
+                </div>
+
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-800">
+                    <span className="font-semibold">Note:</span> Enrichment is processed asynchronously.
+                    Poll this endpoint every 30-60 seconds until status is "completed" or "failed".
+                    Processing typically takes 5-15 minutes.
+                  </p>
+                </div>
+              </div> */}
+
+              {/* Results Delivery */}
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">2. Receiving Results</h3>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs text-green-800">
+                    <span className="font-semibold">📧 Results Delivery:</span> Once your enrichment request is processed,
+                    you'll receive an email with the enriched CSV file attached.
+                  </p>
                 </div>
               </div>
             </div>
@@ -509,29 +843,58 @@ const DataEnrichment = () => {
             </button>
 
             {/* Modal Header */}
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Generate New API Key</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              {newApiKey ? 'API Key Generated!' : 'Generate New API Key'}
+            </h2>
             <p className="text-sm text-gray-600 mb-6">
-              Create a new API key for programmatic access to Merlin's data enrichment
+              {newApiKey
+                ? 'Make sure to copy your API key now. You won\'t be able to see it again!'
+                : 'Create a new API key for programmatic access to Merlin\'s data enrichment'
+              }
             </p>
 
-            {/* Form */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-900 mb-2">
-                Key Name
-              </label>
-              <input
-                type="text"
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="e.g., Production API Key"
-                className="w-full px-4 py-3 border-2 border-yellow-400 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleCreateKey();
-                  }
-                }}
-              />
-            </div>
+            {/* Show newly created key */}
+            {newApiKey ? (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Your API Key
+                </label>
+                <div className="flex items-center gap-2 p-3 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                  <code className="flex-1 text-sm font-mono text-gray-900 break-all">
+                    {newApiKey}
+                  </code>
+                  <button
+                    onClick={() => copyToClipboard(newApiKey)}
+                    className="flex-shrink-0 p-2 text-gray-700 hover:text-gray-900 hover:bg-yellow-100 rounded transition"
+                    title="Copy to clipboard"
+                  >
+                    <FiCopy className="w-5 h-5" />
+                  </button>
+                </div>
+                <p className="text-xs text-red-600 mt-2">
+                  ⚠️ This is the only time you'll see this key. Store it securely!
+                </p>
+              </div>
+            ) : (
+              /* Form */
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Key Name
+                </label>
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="e.g., Production API Key"
+                  className="w-full px-4 py-3 border-2 border-yellow-400 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateKey();
+                    }
+                  }}
+                />
+              </div>
+            )}
 
             {/* Buttons */}
             <div className="flex justify-end gap-3">
@@ -539,15 +902,17 @@ const DataEnrichment = () => {
                 onClick={handleCancelGenerateKey}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition"
               >
-                Cancel
+                {newApiKey ? 'Done' : 'Cancel'}
               </button>
-              <button
-                onClick={handleCreateKey}
-                disabled={!newKeyName.trim()}
-                className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Generate Key
-              </button>
+              {!newApiKey && (
+                <button
+                  onClick={handleCreateKey}
+                  disabled={!newKeyName.trim()}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Generate Key
+                </button>
+              )}
             </div>
           </div>
         </div>

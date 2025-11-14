@@ -138,13 +138,41 @@ const Dashboard = () => {
           .map(event => {
             // Parse attendees - could be array or string
             let attendees = [];
+            const userEmailLower = user?.email?.toLowerCase() || '';
             if (Array.isArray(event.attendees)) {
-              attendees = event.attendees;
+              attendees = event.attendees.filter(att => {
+                // Extract email from attendee if present
+                const emailMatch = (typeof att === 'string' ? att : att.email || '').match(/[\w\.-]+@[\w\.-]+\.\w+/);
+                const attEmail = emailMatch ? emailMatch[0].toLowerCase() : (typeof att === 'string' ? att : att.email || '').toLowerCase();
+                return attEmail !== userEmailLower;
+              });
             } else if (typeof event.attendees === 'string') {
-              // If it's a string, split by comma or newline
-              attendees = event.attendees.split(/[,\n]/).filter(a => a.trim());
+              // If it's a string, split by semicolon (same format as Meetings page)
+              // Format: "email (status); email2 (status)" or "Name (email@domain.com) (status)"
+              // Use the same logic as Meetings.jsx extractAttendees
+              attendees = event.attendees
+                .split(';')
+                .map(a => a.trim())
+                .filter(Boolean)
+                .map(a => a.replace(/\s*\(.+?\)$/, '')) // Remove status part (last parentheses)
+                .filter(a => {
+                  // Extract email from string if present (format: "Name (email@domain.com)" or "email@domain.com")
+                  const emailMatch = a.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+                  const itemEmail = emailMatch ? emailMatch[0].toLowerCase() : a.toLowerCase();
+                  // Filter out the user's email
+                  return itemEmail !== userEmailLower;
+                });
             }
             
+            // Debug: Log location to see what we're getting
+            if (event.location) {
+              console.log('[Dashboard] Event location:', {
+                event_id: event.event_id,
+                location: event.location,
+                locationType: typeof event.location,
+              });
+            }
+
             return {
               id: event.event_id,
               title: event.event || 'Untitled Meeting',
@@ -472,14 +500,10 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-4">
                 {todaysMeetings.map((meeting) => {
-                  // Format attendee names (assuming they might be strings or objects)
-                  const attendeeNames = meeting.attendees?.slice(0, 2).map(att => {
-                    if (typeof att === 'string') {
-                      // Try to extract name from string format "Name (status)"
-                      return att.split('(')[0].trim();
-                    }
-                    return att?.name || att?.email || 'Unknown';
-                  }) || [];
+                  // Format attendee names and emails - attendees are strings from extractAttendees
+                  // Format after processing: "Name (email@domain.com)" or "email@domain.com"
+                  // Just display them as-is (they already contain email)
+                  const attendeeDisplay = meeting.attendees?.slice(0, 2) || [];
                   
                   // Estimate key insights - show for all meetings per screenshot
                   const keyInsightsCount = 3; // Always show 3 key insights per screenshot
@@ -517,12 +541,21 @@ const Dashboard = () => {
                         </div>
                         <div className="flex items-center gap-1 text-sm text-gray-600">
                           <FiVideo className="w-4 h-4" />
-                          <span>{getPlatform(meeting.location)}</span>
+                          <span>
+                            {(() => {
+                              const loc = meeting.location;
+                              if (!loc) return 'Meeting';
+                              if (typeof loc !== 'string') return 'Meeting';
+                              const trimmed = loc.trim();
+                              if (!trimmed || trimmed === 'No Location' || trimmed === 'No location') return 'Meeting';
+                              return trimmed;
+                            })()}
+                          </span>
                         </div>
-                        {attendeeNames.length > 0 ? (
+                        {attendeeDisplay.length > 0 ? (
                           <div className="flex items-center gap-1 text-sm text-gray-600">
                             <FiUsers className="w-4 h-4" />
-                            <span>{attendeeNames.join(', ')}{meeting.attendees?.length > 2 ? `, +${meeting.attendees.length - 2} more` : ''}</span>
+                            <span>{attendeeDisplay.join(', ')}{meeting.attendees?.length > 2 ? `, +${meeting.attendees.length - 2} more` : ''}</span>
                           </div>
                         ) : (
                           <div></div>
