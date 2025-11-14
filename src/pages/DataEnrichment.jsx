@@ -3,8 +3,10 @@ import Navbar from '../components/Navbar';
 import { FiMail, FiDownload, FiUpload, FiFileText, FiCode, FiCreditCard, FiInfo, FiKey, FiCopy, FiTrash2, FiPlus, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { uploadCsvForEnrichment, getEnrichmentJobs, downloadEnrichedCsv } from '../lib/enrichmentApi';
 import { generateApiKey, listApiKeys, toggleApiKey, deleteApiKey } from '../lib/apiKeysApi';
+import { useAuth } from '../contexts/AuthContext';
 
 const DataEnrichment = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('csv');
   const [uploadedFile, setUploadedFile] = useState(null);
   const [email, setEmail] = useState('');
@@ -89,6 +91,37 @@ const DataEnrichment = () => {
       );
 
       setEnrichmentSuccess(result.message);
+
+      // Send notification to insights@usemerlin.io via formsubmit.co
+      try {
+        const formData = new FormData();
+        formData.append('name', user?.user_metadata?.full_name || user?.email || 'User');
+        formData.append('email', user?.email || '');
+        formData.append('message', `CSV Upload for Data Enrichment:\n\n` +
+          `- File: ${uploadedFile.name}\n` +
+          `- Records: ${result.total_records}\n` +
+          `- Fields: ${selectedFields.join(', ')}\n` +
+          `- Delivery Email: ${email}\n` +
+          `- Job ID: ${result.job_id}\n` +
+          `- Credits Charged: ${result.credits_required}`);
+        formData.append('_subject', `Data Enrichment: CSV Upload - ${uploadedFile.name}`);
+        formData.append('_captcha', 'false');
+
+        const response = await fetch('https://formsubmit.co/insights@usemerlin.io', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          console.log('✅ Notification sent to insights@usemerlin.io');
+        }
+      } catch (error) {
+        // Don't fail the enrichment if notification fails
+        console.error('Error sending notification:', error);
+      }
 
       // Reset form
       setUploadedFile(null);
