@@ -8,10 +8,12 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import CreditsBadge from "./CreditsBadge";
+import { getCreditBalance } from "../lib/billingApi";
 
 const Navbar = () => {
   const [isPreMeetingOpen, setIsPreMeetingOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   
@@ -33,6 +35,26 @@ const Navbar = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Fetch credit balance on mount and when user changes
+  useEffect(() => {
+    if (!user) {
+      setCreditBalance(null);
+      return;
+    }
+
+    const fetchBalance = async () => {
+      try {
+        const data = await getCreditBalance();
+        setCreditBalance(data.credits_balance);
+      } catch (error) {
+        console.error("Error fetching credit balance in Navbar:", error);
+        // Keep previous balance on error
+      }
+    };
+
+    fetchBalance();
+  }, [user]);
 
   const handleLogout = async () => {
     await signOut();
@@ -153,27 +175,29 @@ const Navbar = () => {
 
         <div className="flex items-center space-x-5">
           {/* Credits badge */}
-          <Link to="/billing" className="hover:opacity-80 transition">
-            <CreditsBadge 
-              amount="100"
-              text="credits"
-              icon={
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
-            />
-          </Link>
+          {creditBalance !== null && (
+            <Link to="/billing" className="hover:opacity-80 transition">
+              <CreditsBadge 
+                amount={creditBalance.toLocaleString()}
+                text="credits"
+                icon={
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                }
+              />
+            </Link>
+          )}
 
           {/* User profile */}
           <div className="relative" ref={userMenuRef}>
