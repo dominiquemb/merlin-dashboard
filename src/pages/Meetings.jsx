@@ -518,7 +518,7 @@ const Meetings = () => {
   };
 
   const handleConnectCalendar = (provider) => {
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
     const authUrl = `${apiUrl}/${provider}`;
     window.location.href = authUrl;
   };

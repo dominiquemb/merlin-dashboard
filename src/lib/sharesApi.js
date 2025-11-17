@@ -4,7 +4,7 @@
  * Functions to interact with the merlin_heart Shares API for creating and managing shareable meeting brief links
  */
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
 const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
 
 /**

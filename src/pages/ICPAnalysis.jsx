@@ -57,7 +57,7 @@ const ICPAnalysis = () => {
   const fetchNonIcpCount = async () => {
     try {
       const token = await getAuthToken();
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
 
       const response = await fetch(`${apiUrl}/icp/stats/non-icp-count`, {
         method: 'GET',
@@ -81,7 +81,7 @@ const ICPAnalysis = () => {
   const fetchAverageIcpScore = async () => {
     try {
       const token = await getAuthToken();
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
 
       const response = await fetch(`${apiUrl}/icp/stats/average-score`, {
         method: 'GET',
@@ -129,7 +129,7 @@ const ICPAnalysis = () => {
     setIsLoadingMeetings(true);
     try {
       const token = await getAuthToken();
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
       
       console.log('Fetching meetings with ICP from:', `${apiUrl}/calendar/events?days_ahead=7`);
       
@@ -640,7 +640,7 @@ const ICPAnalysis = () => {
     setIsLoadingCriteria(true);
     try {
       const token = await getAuthToken();
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
 
       const response = await fetch(`${apiUrl}/icp/criteria`, {
         method: 'GET',
@@ -684,7 +684,7 @@ const ICPAnalysis = () => {
     
     try {
       const token = await getAuthToken();
-      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
       
       const response = await fetch(`${apiUrl}/icp/analyze`, {
         method: 'POST',

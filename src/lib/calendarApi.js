@@ -4,7 +4,7 @@
  * Functions to interact with the merlin_heart Calendar Sync API
  */
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
 
 /**
  * Get the Supabase auth token from the session
