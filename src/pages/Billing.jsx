@@ -1,67 +1,90 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Navbar from "../components/Navbar";
 import {
-  FiShoppingCart,
-  FiZap,
   FiInfo,
   FiClock,
   FiCalendar,
   FiTarget,
   FiSun,
   FiDatabase,
+  FiCheck,
+  FiArrowRight,
 } from "react-icons/fi";
 import {
   getCreditBalance,
   getCreditTransactions,
-  purchaseCredits,
-  getAutoTopUpSettings,
-  updateAutoTopUpSettings,
+  getSubscriptionStatus,
+  createSubscription,
 } from "../lib/billingApi";
 
 const Billing = () => {
-  const [autoTopUpEnabled, setAutoTopUpEnabled] = useState(false);
-  const [customAmount, setCustomAmount] = useState("");
   const [creditBalance, setCreditBalance] = useState(0);
   const [creditsUsedThisMonth, setCreditsUsedThisMonth] = useState(0);
   const [transactions, setTransactions] = useState([]);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
-  const [isPurchasing, setIsPurchasing] = useState(false);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
-  const creditPackages = [
+  const subscriptionPlans = useMemo(() => [
     {
-      name: "Starter",
-      credits: 500,
-      price: 50,
-      pricePerCredit: 0.1,
+      key: "free",
+      name: "Free",
+      price: 0,
+      priceDisplay: "Free",
+      credits: 20,
+      creditsDisplay: "20 credits",
+      interval: null,
+      description: "Perfect for trying out Merlin",
+      features: [
+        "20 credits per month",
+        "Basic meeting insights",
+        "ICP analysis",
+        "Community support",
+      ],
       isPopular: false,
-      savings: null,
+      isCurrent: subscriptionStatus?.plan === "free",
     },
     {
-      name: "Professional",
-      credits: 2000,
-      price: 180,
-      pricePerCredit: 0.09,
+      key: "growth",
+      name: "Growth",
+      price: 69,
+      priceDisplay: "£69",
+      credits: 350,
+      creditsDisplay: "350 credits",
+      interval: "month",
+      description: "Perfect for growing teams",
+      features: [
+        "350 credits per month",
+        "All Free features",
+        "Advanced insights",
+        "Email support",
+        "Early renewal available",
+      ],
       isPopular: true,
-      savings: "10%",
+      isCurrent: subscriptionStatus?.plan === "growth",
     },
     {
-      name: "Business",
-      credits: 5000,
-      price: 400,
-      pricePerCredit: 0.08,
+      key: "pro",
+      name: "Pro",
+      price: 99,
+      priceDisplay: "£99",
+      credits: 600,
+      creditsDisplay: "600 credits",
+      interval: "month",
+      description: "For power users and teams",
+      features: [
+        "600 credits per month",
+        "All Growth features",
+        "Priority support",
+        "Advanced analytics",
+        "Early renewal available",
+      ],
       isPopular: false,
-      savings: "20%",
+      isCurrent: subscriptionStatus?.plan === "pro",
     },
-    {
-      name: "Enterprise",
-      credits: 10000,
-      price: 700,
-      pricePerCredit: 0.07,
-      isPopular: false,
-      savings: "30%",
-    },
-  ];
+  ], [subscriptionStatus?.plan]);
 
   const creditUsage = [
     {
@@ -116,6 +139,25 @@ const Billing = () => {
     fetchBalance();
   }, []);
 
+  // Fetch subscription status on mount
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        setIsLoadingSubscription(true);
+        const data = await getSubscriptionStatus();
+        setSubscriptionStatus(data);
+      } catch (error) {
+        console.error("Error fetching subscription status:", error);
+        // Default to free plan if error
+        setSubscriptionStatus({ plan: "free", status: "active", credits_remaining: creditBalance });
+      } finally {
+        setIsLoadingSubscription(false);
+      }
+    };
+
+    fetchSubscription();
+  }, []);
+
   // Fetch transactions on mount
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -133,57 +175,53 @@ const Billing = () => {
     fetchTransactions();
   }, []);
 
-  // Fetch auto top-up settings on mount
-  useEffect(() => {
-    const fetchAutoTopUp = async () => {
-      try {
-        const data = await getAutoTopUpSettings();
-        setAutoTopUpEnabled(data.enabled);
-      } catch (error) {
-        console.error("Error fetching auto top-up settings:", error);
-      }
-    };
+  const handleSubscribe = async (planKey) => {
+    if (planKey === "free") {
+      // Can't subscribe to free plan
+      return;
+    }
 
-    fetchAutoTopUp();
-  }, []);
-
-  const handlePurchase = async (pkg) => {
     try {
-      setIsPurchasing(true);
-      const result = await purchaseCredits(pkg.name, pkg.credits, pkg.price);
+      setIsSubscribing(true);
+      
+      // Get current URL for success/cancel redirects
+      const baseUrl = window.location.origin;
+      const successUrl = `${baseUrl}/billing?success=true`;
+      const cancelUrl = `${baseUrl}/billing?canceled=true`;
 
-      if (result.success) {
-        // Update balance
-        setCreditBalance(result.new_balance);
+      const result = await createSubscription(planKey, successUrl, cancelUrl);
 
-        // Refresh transactions
-        const newTransactions = await getCreditTransactions();
-        setTransactions(newTransactions);
-
-        alert(`Successfully purchased ${pkg.credits} credits!`);
+      if (result.checkout_url) {
+        // Redirect to Stripe Checkout
+        window.location.href = result.checkout_url;
+      } else {
+        throw new Error("No checkout URL received");
       }
     } catch (error) {
-      console.error("Error purchasing credits:", error);
-      alert("Failed to purchase credits. Please try again.");
-    } finally {
-      setIsPurchasing(false);
+      console.error("Error creating subscription:", error);
+      alert("Failed to create subscription. Please try again.");
+      setIsSubscribing(false);
     }
   };
 
-  const handleAutoTopUpToggle = async () => {
-    try {
-      const newValue = !autoTopUpEnabled;
-      await updateAutoTopUpSettings(newValue);
-      setAutoTopUpEnabled(newValue);
-    } catch (error) {
-      console.error("Error updating auto top-up:", error);
-      alert("Failed to update auto top-up settings.");
+  const getPlanButtonText = (plan) => {
+    if (plan.isCurrent) {
+      return "Current Plan";
     }
+    if (subscriptionStatus?.plan === "free" && plan.key !== "free") {
+      return "Upgrade";
+    }
+    if (subscriptionStatus?.plan === "growth" && plan.key === "pro") {
+      return "Upgrade";
+    }
+    if (subscriptionStatus?.plan === "pro" && plan.key === "growth") {
+      return "Downgrade";
+    }
+    return "Select Plan";
   };
 
-  const handleRequestQuote = () => {
-    console.log("Requesting custom quote for:", customAmount, "credits");
-    window.location.href = `mailto:insights@usemerlin.io?subject=Custom Credit Package Request&body=I would like to request a quote for ${customAmount} credits.`;
+  const getPlanButtonDisabled = (plan) => {
+    return plan.isCurrent || isSubscribing || plan.key === "free";
   };
 
   return (
@@ -194,21 +232,44 @@ const Billing = () => {
         {/* Page Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Credits & Billing
+            Billing & Subscription
           </h1>
           <p className="text-gray-600">
-            Manage your credits and view usage history
+            Manage your subscription plan and view usage history
           </p>
         </div>
 
-        {/* Current Balance Section */}
+        {/* Current Plan & Balance Section */}
         <div className="bg-accent-light border border-accent rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Current Plan */}
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">
-                Current Balance
+                Current Plan
               </p>
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-2xl font-bold text-gray-900 capitalize">
+                  {isLoadingSubscription ? "Loading..." : subscriptionStatus?.plan || "Free"}
+                </span>
+                {subscriptionStatus?.status === "active" && (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    Active
+                  </span>
+                )}
+              </div>
+              {subscriptionStatus?.next_billing_date && (
+                <p className="text-sm text-gray-600">
+                  Next billing: {new Date(subscriptionStatus.next_billing_date).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+
+            {/* Credit Balance */}
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2">
+                Credit Balance
+              </p>
+              <div className="flex items-center gap-2 mb-2">
                 <svg
                   className="w-7 h-7 text-primary"
                   fill="none"
@@ -226,145 +287,112 @@ const Billing = () => {
                   {isLoadingBalance ? "Loading..." : `${creditBalance.toLocaleString()} Credits`}
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                  />
-                </svg>
-                <span>{creditsUsedThisMonth} credits used this month</span>
-              </div>
+              <p className="text-sm text-gray-600">
+                {creditsUsedThisMonth} credits used this month
+              </p>
             </div>
-            <button className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition">
-              <FiShoppingCart className="w-4 h-4" />
-              Buy Credits
-            </button>
           </div>
         </div>
 
-        {/* Auto Top-Up Section */}
-        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <FiZap className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Auto Top-Up</h3>
-                <p className="text-sm text-gray-600">
-                  Never run out of credits
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleAutoTopUpToggle}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-                autoTopUpEnabled ? "bg-gray-900" : "bg-gray-300"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
-                  autoTopUpEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="bg-accent-light border border-accent rounded-lg p-4 flex items-start gap-3">
-            <FiInfo className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-gray-900">
-              Auto Top-Up automatically purchases credits when your balance
-              falls below a threshold you set. This ensures uninterrupted
-              service and you'll never miss important meeting insights or data
-              enrichment opportunities.
-            </p>
-          </div>
-        </div>
-
-        {/* Credit Packages Section */}
+        {/* Subscription Plans Section */}
         <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">
-            Credit Packages
+            Choose Your Plan
           </h2>
 
-          <div className="grid md:grid-cols-4 gap-4 mb-6">
-            {creditPackages.map((pkg) => (
+          <div className="grid md:grid-cols-3 gap-4">
+            {subscriptionPlans.map((plan) => (
               <div
-                key={pkg.name}
+                key={plan.key}
                 className={`relative border-2 rounded-xl p-6 ${
-                  pkg.isPopular
+                  plan.isPopular
                     ? "border-primary bg-accent-light"
+                    : plan.isCurrent
+                    ? "border-green-500 bg-green-50"
                     : "border-gray-200 bg-white"
                 }`}
               >
-                {pkg.isPopular && (
+                {plan.isPopular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                     <span className="bg-primary text-white text-xs font-semibold px-3 py-1 rounded-full">
                       Most Popular
                     </span>
                   </div>
                 )}
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                    {pkg.name}
-                  </h3>
-                  <p className="text-2xl font-bold text-gray-900 mb-1">
-                    {pkg.credits.toLocaleString()} credits
-                  </p>
-                  <p className="text-sm text-gray-600 mb-1">
-                    ${pkg.price} / ${pkg.pricePerCredit.toFixed(2)} per credit
-                  </p>
-                  {pkg.savings && (
-                    <span className="inline-block bg-green-100 text-green-700 text-xs font-medium px-2 py-1 rounded-full mb-4">
-                      Save {pkg.savings}
+                {plan.isCurrent && (
+                  <div className="absolute -top-3 right-4">
+                    <span className="bg-green-500 text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1">
+                      <FiCheck className="w-3 h-3" />
+                      Current
                     </span>
-                  )}
+                  </div>
+                )}
+                
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {plan.name}
+                  </h3>
+                  <div className="mb-2">
+                    <span className="text-3xl font-bold text-gray-900">
+                      {plan.priceDisplay}
+                    </span>
+                    {plan.interval && (
+                      <span className="text-sm text-gray-600">/{plan.interval}</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {plan.creditsDisplay}
+                  </p>
+                  <p className="text-xs text-gray-500 mb-4">
+                    {plan.description}
+                  </p>
                 </div>
+
+                <ul className="space-y-2 mb-6 text-sm">
+                  {plan.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <FiCheck className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      <span className="text-gray-700">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
                 <button
-                  onClick={() => handlePurchase(pkg)}
-                  disabled={isPurchasing}
-                  className={`w-full mt-4 px-4 py-2.5 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
-                    pkg.isPopular
+                  onClick={() => handleSubscribe(plan.key)}
+                  disabled={getPlanButtonDisabled(plan)}
+                  className={`w-full px-4 py-2.5 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                    plan.isCurrent
+                      ? "bg-gray-200 text-gray-600 cursor-not-allowed"
+                      : plan.isPopular
                       ? "bg-gray-900 text-white hover:bg-gray-800"
                       : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  {isPurchasing ? "Processing..." : "Purchase"}
+                  {isSubscribing && !plan.isCurrent ? (
+                    "Processing..."
+                  ) : (
+                    <>
+                      {getPlanButtonText(plan)}
+                      {!plan.isCurrent && plan.key !== "free" && (
+                        <FiArrowRight className="w-4 h-4" />
+                      )}
+                    </>
+                  )}
                 </button>
               </div>
             ))}
           </div>
 
-          {/* Custom Amount */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Custom Amount</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Need a different amount? Contact us for enterprise pricing or
-              custom packages.
-            </p>
-            <div className="flex gap-3">
-              <input
-                type="number"
-                value={customAmount}
-                onChange={(e) => setCustomAmount(e.target.value)}
-                placeholder="Enter number of credits"
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
-              />
-              <button
-                onClick={handleRequestQuote}
-                disabled={!customAmount}
-                className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Request Quote
-              </button>
+          {/* Early Renewal Info */}
+          <div className="mt-6 bg-accent-light border border-accent rounded-lg p-4 flex items-start gap-3">
+            <FiInfo className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-gray-900">
+              <p className="font-medium mb-1">Early Renewal Available</p>
+              <p>
+                On Growth and Pro plans, if you run out of credits, your subscription will automatically renew early. 
+                This ensures you never miss important meeting insights or data enrichment opportunities. 
+                Credits are reset to your plan's monthly allowance when renewal occurs.
+              </p>
             </div>
           </div>
         </div>

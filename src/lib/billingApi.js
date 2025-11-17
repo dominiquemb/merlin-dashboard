@@ -179,3 +179,59 @@ export const deductCredits = async (credits, description) => {
     throw error;
   }
 };
+
+/**
+ * Get subscription status
+ */
+export const getSubscriptionStatus = async () => {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/stripe/subscription/status`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch subscription status');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching subscription status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create subscription checkout session
+ */
+export const createSubscription = async (plan, successUrl, cancelUrl) => {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/stripe/create-subscription`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        plan: plan,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to create subscription');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating subscription:', error);
+    throw error;
+  }
+};
