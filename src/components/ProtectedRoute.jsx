@@ -5,10 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  console.log('[ProtectedRoute] Render - loading:', loading, 'user:', user ? 'exists' : 'none');
-
+  // Show loading state
   if (loading) {
-    console.log('[ProtectedRoute] Showing loading state');
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] via-[#f8f6f1] to-[#faf9f5] flex items-center justify-center">
         <div className="text-center">
@@ -21,12 +19,16 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
+  // Redirect to login if not authenticated
   if (!user) {
-    console.log('[ProtectedRoute] No user, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('[ProtectedRoute] User authenticated, rendering children');
+  // Render protected content
+  if (!children) {
+    return <div>No content to render</div>;
+  }
+
   return children;
 };
 

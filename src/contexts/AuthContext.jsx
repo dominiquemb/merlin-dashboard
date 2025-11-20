@@ -16,31 +16,28 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[AuthContext] Initializing auth, hash:', window.location.hash);
+    let mounted = true;
     
     // Check active sessions and sets the user
     // This also handles OAuth callback with hash fragments (#access_token=...)
     const initializeAuth = async () => {
       try {
-        console.log('[AuthContext] Getting session...');
         // Get session - Supabase automatically processes hash fragments
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        console.log('[AuthContext] Session:', session ? 'exists' : 'none', error ? `error: ${error.message}` : '');
+        if (!mounted) return;
+        
+        if (error) {
+          console.error('Error getting session:', error);
+        }
         
         setUser(session?.user ?? null);
         setLoading(false);
-        
-        // Clean up hash fragment after session is loaded
-        if (window.location.hash) {
-          console.log('[AuthContext] Cleaning up hash fragment');
-          const path = window.location.pathname;
-          const search = window.location.search;
-          window.history.replaceState(null, '', path + search);
-        }
       } catch (err) {
-        console.error('[AuthContext] Error initializing auth:', err);
-        setLoading(false);
+        console.error('Error initializing auth:', err);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -48,27 +45,30 @@ export const AuthProvider = ({ children }) => {
 
     // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[AuthContext] Auth state changed:', event, session ? 'has session' : 'no session');
+      if (!mounted) return;
       
       setUser(session?.user ?? null);
       setLoading(false);
       
       // Handle OAuth callback - clean up hash fragment after Supabase processes it
       if (event === 'SIGNED_IN' && session) {
-        console.log('[AuthContext] User signed in, cleaning hash');
-        // Clean up hash fragment after successful sign in
+        // Clean up hash after a delay to ensure everything is processed
         setTimeout(() => {
-          if (window.location.hash) {
+          if (!mounted) return;
+          const hash = window.location.hash;
+          if (hash && hash.includes('access_token')) {
             const path = window.location.pathname;
             const search = window.location.search;
             window.history.replaceState(null, '', path + search);
-            console.log('[AuthContext] Hash cleaned, new URL:', path + search);
           }
-        }, 100);
+        }, 1000);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Sign up with email and password
