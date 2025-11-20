@@ -131,7 +131,7 @@ const Navbar = () => {
                 onClick={() => setIsPreMeetingOpen(!isPreMeetingOpen)}
                 className="flex items-center space-x-1 text-neutral-800 hover:text-neutral-800 transition font-medium"
               >
-                <span>Pre meeting intelligence</span>
+                <span>Pre meeting Insights</span>
                 <FiChevronDown className="w-4 h-4" />
               </button>
               {isPreMeetingOpen && (

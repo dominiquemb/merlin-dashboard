@@ -404,7 +404,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Your Intelligence HQ
+              Your Insights HQ
             </h1>
             <p className="text-gray-600">
               You're outperforming 90% of sales professionals
