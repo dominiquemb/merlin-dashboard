@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import MeetingCard from '../components/MeetingCard';
 import MeetingDetails from '../components/MeetingDetails';
 import CreditsBadge from '../components/CreditsBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { syncUserCalendar, fetchCalendarEvents } from '../lib/calendarApi';
-import { FiChevronLeft, FiChevronRight, FiCreditCard, FiRefreshCw, FiCheck, FiX, FiLink } from 'react-icons/fi';
+import { getCreditBalance } from '../lib/billingApi';
+import { FiChevronLeft, FiChevronRight, FiCreditCard, FiRefreshCw, FiCheck, FiX, FiLink, FiAlertCircle } from 'react-icons/fi';
 
 const parseDateTime = (value) => {
   if (!value) return null;
@@ -429,6 +430,9 @@ const Meetings = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState(null);
   const [syncMessage, setSyncMessage] = useState('');
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(0);
+  const navigate = useNavigate();
 
   const loadMeetings = useCallback(async () => {
     if (!user?.email) {
@@ -450,6 +454,29 @@ const Meetings = () => {
 
       const transformed = transformEventsToMeetings(response.data?.events || [], user.email);
       setMeetings(transformed);
+
+      // Check for insufficient credits for verification
+      // Look for meetings that are enriched (have briefing_source) but not verified (ready_to_send = false)
+      const unverifiedMeetings = transformed.filter(meeting => 
+        meeting.briefingSource && !meeting.readyToSend && meeting.type === 'external'
+      );
+
+      if (unverifiedMeetings.length > 0) {
+        // Check credit balance
+        try {
+          const balanceData = await getCreditBalance();
+          const balance = balanceData.credits_balance || 0;
+          setCreditBalance(balance);
+          
+          const requiredCredits = 2;
+          if (balance < requiredCredits) {
+            // Show modal if user has unverified meetings but insufficient credits
+            setShowInsufficientCreditsModal(true);
+          }
+        } catch (error) {
+          console.error('Error fetching credit balance:', error);
+        }
+      }
     } catch (error) {
       console.error('❌ [Meetings] Failed to load meetings:', error);
       setMeetings([]);
@@ -740,6 +767,59 @@ const Meetings = () => {
         {/* Right Panel - Meeting Details */}
         <MeetingDetails meeting={selectedMeeting} />
       </div>
+
+      {/* Insufficient Credits Modal */}
+      {showInsufficientCreditsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative">
+            {/* Close button */}
+            <button
+              onClick={() => setShowInsufficientCreditsModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+            >
+              <FiX className="w-6 h-6" />
+            </button>
+
+            <div className="text-center py-4">
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiAlertCircle className="w-8 h-8 text-yellow-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Insufficient Credits</h3>
+              <p className="text-gray-600 mb-4">
+                Your meeting insights cannot be verified until you add more credits.
+              </p>
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Current Balance:</span>
+                  <span className="font-semibold text-gray-900">{creditBalance} credits</span>
+                </div>
+                <div className="flex items-center justify-between text-sm mt-2">
+                  <span className="text-gray-600">Required to Verify:</span>
+                  <span className="font-semibold text-gray-900">2 credits per meeting</span>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowInsufficientCreditsModal(false)}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setShowInsufficientCreditsModal(false);
+                    navigate('/billing');
+                  }}
+                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition flex items-center justify-center gap-2"
+                >
+                  <FiCreditCard className="w-4 h-4" />
+                  Go to Billing
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -181,18 +181,54 @@ const Dashboard = () => {
               location: event.location || 'No location',
               attendees: attendees,
               enrichmentStatus: event.enrichment_status,
+              readyToSend: event.enriched_ready_to_send || false,
+              briefingSource: event.briefing_source,
             };
           });
 
         console.log(`Dashboard: Upcoming meetings:`, upcoming);
         setTodaysMeetings(upcoming);
 
-        // Calculate stats from all events
-        const enrichedCount = events.filter(e => 
-          e.enrichment_status === 'processed' || e.enrichment_status === 'ready'
-        ).length;
+        // Helper function to determine if a meeting is external (has external attendees)
+        const isExternalMeeting = (event) => {
+          const userEmailLower = user?.email?.toLowerCase() || '';
+          let externalAttendees = [];
+          
+          if (Array.isArray(event.attendees)) {
+            externalAttendees = event.attendees.filter(att => {
+              const emailMatch = (typeof att === 'string' ? att : att.email || '').match(/[\w\.-]+@[\w\.-]+\.\w+/);
+              const attEmail = emailMatch ? emailMatch[0].toLowerCase() : (typeof att === 'string' ? att : att.email || '').toLowerCase();
+              return attEmail !== userEmailLower;
+            });
+          } else if (typeof event.attendees === 'string' && event.attendees !== 'No Attendees') {
+            externalAttendees = event.attendees
+              .split(';')
+              .map(a => a.trim())
+              .filter(Boolean)
+              .map(a => a.replace(/\s*\(.+?\)$/, '')) // Remove status part
+              .filter(a => {
+                const emailMatch = a.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+                const itemEmail = emailMatch ? emailMatch[0].toLowerCase() : a.toLowerCase();
+                return itemEmail !== userEmailLower;
+              });
+          }
+          
+          return externalAttendees.length > 0;
+        };
+
+        // Calculate stats from all events - only count external meetings
+        const enrichedCount = events.filter(e => {
+          const isEnriched = e.enrichment_status === 'processed' || e.enrichment_status === 'ready';
+          return isEnriched && isExternalMeeting(e);
+        }).length;
         
-        const totalInsights = events.filter(e => e.briefing_source).length * 3; // Estimate 3 insights per enriched meeting
+        // Only count insights from verified external meetings (ready_to_send = true)
+        const verifiedEvents = events.filter(e => 
+          e.enriched_ready_to_send === true && 
+          e.briefing_source && 
+          isExternalMeeting(e)
+        );
+        const totalInsights = verifiedEvents.length * 3; // Estimate 3 insights per verified meeting
         const hoursSaved = enrichedCount * 0.5; // Estimate 30 min (0.5 hours) saved per meeting
 
         console.log('Dashboard: Stats calculated:', { enrichedCount, totalInsights, hoursSaved });
@@ -283,19 +319,6 @@ const Dashboard = () => {
     const words = title.split(/\s+/);
     const capitalized = words.filter(w => w[0] && w[0] === w[0].toUpperCase() && w.length > 2);
     return capitalized.length > 0 ? capitalized[0] : null;
-  };
-
-  // Calculate average prep time from meetings prepared
-  // If we have hours saved and meetings prepared, calculate average
-  // Otherwise use a reasonable estimate based on meetings
-  const calculateAvgPrepTime = () => {
-    if (stats.meetingsPrepared > 0 && stats.hoursSaved > 0) {
-      // Convert hours to minutes and divide by meetings
-      const avgMinutes = Math.round((stats.hoursSaved * 60) / stats.meetingsPrepared);
-      return Math.max(1, Math.min(60, avgMinutes)); // Cap between 1-60 mins for display
-    }
-    // Estimate: assume 8-15 mins per meeting on average
-    return stats.meetingsPrepared > 0 ? Math.round(45 / Math.max(1, stats.meetingsPrepared)) + 5 : 8;
   };
 
   // Calculate upgrade opportunities data from real meetings
@@ -410,13 +433,6 @@ const Dashboard = () => {
               You're outperforming 90% of sales professionals
             </p>
           </div>
-          
-          {/* Daily Streak Badge */}
-          <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-            <span className="text-sm font-medium">Daily Streak</span>
-            <span className="text-2xl font-bold">7</span>
-            <span className="text-xl">🔥</span>
-          </div>
         </div>
 
         {/* KPI Cards Grid */}
@@ -434,7 +450,7 @@ const Dashboard = () => {
             <p className="text-sm text-gray-600">Meetings Prepared</p>
           </div>
 
-          {/* Insights Generated */}
+          {/* Verified Insights */}
           <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -444,7 +460,7 @@ const Dashboard = () => {
                 <div className="text-3xl font-bold text-gray-900">{stats.insightsGenerated}</div>
               </div>
             </div>
-            <p className="text-sm text-gray-600">Insights Generated</p>
+            <p className="text-sm text-gray-600">Verified Insights</p>
           </div>
 
           {/* Research Time Saved */}
@@ -471,9 +487,6 @@ const Dashboard = () => {
               <p className="font-semibold text-gray-900">Live Agent Activity</p>
               <p className="text-sm text-gray-600 transition-opacity duration-500">{liveAgentMessage}</p>
             </div>
-            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-              View activity log →
-            </button>
           </div>
         </div>
 
@@ -505,12 +518,7 @@ const Dashboard = () => {
                   // Just display them as-is (they already contain email)
                   const attendeeDisplay = meeting.attendees?.slice(0, 2) || [];
                   
-                  // Estimate key insights - show for all meetings per screenshot
-                  const keyInsightsCount = 3; // Always show 3 key insights per screenshot
-                  const premiumInsightsCount = 1; // Always show 1 premium insight per screenshot
                   const isReady = meeting.enrichmentStatus === 'processed' || meeting.enrichmentStatus === 'ready';
-                  // Calculate ICP Score (placeholder - could be from actual data)
-                  const icpScore = 14; // Placeholder
 
                   return (
                     <div key={meeting.id} className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
@@ -528,9 +536,6 @@ const Dashboard = () => {
                             Preparing
                           </span>
                         )}
-                        <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-medium">
-                          ICP Score: {icpScore}/15
-                        </span>
                       </div>
 
                       {/* Meeting Details - Single Row, Evenly Spaced */}
@@ -562,18 +567,6 @@ const Dashboard = () => {
                         )}
                       </div>
 
-                      {/* Insights Info - Single Row */}
-                      <div className="flex items-center gap-4 flex-wrap mb-4">
-                        <div className="flex items-center gap-2 text-sm">
-                          <FiCheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-gray-700">{keyInsightsCount} key insight{keyInsightsCount !== 1 ? 's' : ''} ready</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm">
-                          <FiLock className="w-4 h-4 text-purple-600" />
-                          <span className="text-gray-700">{premiumInsightsCount} premium insight{premiumInsightsCount !== 1 ? 's' : ''} available</span>
-                        </div>
-                      </div>
-
                       {/* View Full Brief Button */}
                       <button
                         onClick={() => handleViewBrief(meeting.id)}
@@ -581,59 +574,61 @@ const Dashboard = () => {
                       >
                         View Full Brief
                       </button>
-
-                      {/* Unlock Premium Insights Section - Show for all meetings */}
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                          <h4 className="font-semibold text-gray-900 mb-3">Unlock Premium Insights</h4>
-                          <div className="space-y-3">
-                            {/* Stakeholder Map */}
-                            <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-                              <div className="flex items-start gap-3 flex-1">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <FiUsers className="w-5 h-5 text-blue-600" />
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-gray-900 mb-1">Stakeholder Map</h4>
-                                  <p className="text-sm text-gray-600">
-                                    See the full buying committee and influence map
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleUnlockInsight('Stakeholder Map')}
-                                className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
-                              >
-                                <FiLock className="w-4 h-4" />
-                                <span className="text-sm">Unlock</span>
-                              </button>
-                            </div>
-
-                            {/* Reputation Intelligence */}
-                            <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-                              <div className="flex items-start gap-3 flex-1">
-                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                  <FiTarget className="w-5 h-5 text-purple-600" />
-                                </div>
-                                <div>
-                                  <h4 className="font-semibold text-gray-900 mb-1">Reputation Intelligence</h4>
-                                  <p className="text-sm text-gray-600">
-                                    Track press mentions, sentiment, and executive moves
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleUnlockInsight('Reputation Intelligence')}
-                                className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
-                              >
-                                <FiLock className="w-4 h-4" />
-                                <span className="text-sm">Unlock</span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
                     </div>
                   );
                 })}
+
+                {/* Unlock Premium Insights Section - Show once below all meetings */}
+                {todaysMeetings.length > 0 && (
+                  <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+                    <h4 className="font-semibold text-gray-900 mb-3">Unlock Premium Insights</h4>
+                    <div className="space-y-3">
+                      {/* Stakeholder Map */}
+                      <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FiUsers className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-1">Stakeholder Map</h4>
+                            <p className="text-sm text-gray-600">
+                              See the full buying committee and influence map
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleUnlockInsight('Stakeholder Map')}
+                          className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
+                        >
+                          <FiLock className="w-4 h-4" />
+                          <span className="text-sm">Unlock</span>
+                        </button>
+                      </div>
+
+                      {/* Reputation Intelligence */}
+                      <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FiTarget className="w-5 h-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-1">Reputation Intelligence</h4>
+                            <p className="text-sm text-gray-600">
+                              Track press mentions, sentiment, and executive moves
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleUnlockInsight('Reputation Intelligence')}
+                          className="flex items-center gap-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-lg font-medium transition flex-shrink-0 ml-4"
+                        >
+                          <FiLock className="w-4 h-4" />
+                          <span className="text-sm">Unlock</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
           )}
         </div>
@@ -658,12 +653,12 @@ const Dashboard = () => {
               {/* Key Metrics */}
               <div className="space-y-4 mb-6">
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Your avg prep time</p>
-                  <p className="text-2xl font-bold text-gray-900">{calculateAvgPrepTime()} mins</p>
+                  <p className="text-sm text-gray-600 mb-1">Your average prep time</p>
+                  <p className="text-2xl font-bold text-gray-900">1 min</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Industry average</p>
-                  <p className="text-2xl font-bold text-gray-700">45 mins</p>
+                  <p className="text-sm text-gray-600 mb-1">Industry prep time</p>
+                  <p className="text-2xl font-bold text-gray-700">20 mins</p>
                 </div>
               </div>
 
