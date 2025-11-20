@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: merlin-dashboard-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./build
+    # Rewrite all routes to index.html for client-side routing
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    # Render automatically handles _redirects file in build folder
+
+
+
+
