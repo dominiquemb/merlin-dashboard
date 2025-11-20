@@ -16,17 +16,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('[AuthContext] Initializing auth, hash:', window.location.hash);
+    
     // Check active sessions and sets the user
     // This also handles OAuth callback with hash fragments (#access_token=...)
     const initializeAuth = async () => {
       try {
+        console.log('[AuthContext] Getting session...');
         // Get session - Supabase automatically processes hash fragments
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        console.log('[AuthContext] Session:', session ? 'exists' : 'none', error ? `error: ${error.message}` : '');
         
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        // Clean up hash fragment after session is loaded
+        if (window.location.hash) {
+          console.log('[AuthContext] Cleaning up hash fragment');
+          const path = window.location.pathname;
+          const search = window.location.search;
+          window.history.replaceState(null, '', path + search);
+        }
       } catch (err) {
-        console.error('Error initializing auth:', err);
+        console.error('[AuthContext] Error initializing auth:', err);
         setLoading(false);
       }
     };
@@ -35,20 +48,23 @@ export const AuthProvider = ({ children }) => {
 
     // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[AuthContext] Auth state changed:', event, session ? 'has session' : 'no session');
+      
       setUser(session?.user ?? null);
       setLoading(false);
       
       // Handle OAuth callback - clean up hash fragment after Supabase processes it
       if (event === 'SIGNED_IN' && session) {
+        console.log('[AuthContext] User signed in, cleaning hash');
         // Clean up hash fragment after successful sign in
-        // Use a small delay to ensure everything is processed
         setTimeout(() => {
           if (window.location.hash) {
             const path = window.location.pathname;
             const search = window.location.search;
             window.history.replaceState(null, '', path + search);
+            console.log('[AuthContext] Hash cleaned, new URL:', path + search);
           }
-        }, 50);
+        }, 100);
       }
     });
 

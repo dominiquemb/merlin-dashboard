@@ -20,6 +20,8 @@ import Billing from "./pages/Billing";
 import SharedBrief from "./pages/SharedBrief";
 
 function App() {
+  console.log('[App] Rendering, current path:', window.location.pathname, 'hash:', window.location.hash);
+  
   return (
     <Router>
       <AuthProvider>
