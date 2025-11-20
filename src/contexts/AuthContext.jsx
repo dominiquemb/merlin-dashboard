@@ -18,28 +18,40 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check active sessions and sets the user
     // This also handles OAuth callback with hash fragments (#access_token=...)
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const initializeAuth = async () => {
+      // Get session - Supabase automatically processes hash fragments
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // If we have a hash fragment with tokens, Supabase should have processed it
-      // Clean up the hash from URL after processing
-      if (window.location.hash && session) {
-        window.history.replaceState(null, '', window.location.pathname);
+      // Clean up hash fragment after session is loaded
+      // This ensures React Router can properly handle the route
+      if (window.location.hash) {
+        // Use requestAnimationFrame to ensure DOM is ready
+        requestAnimationFrame(() => {
+          const path = window.location.pathname;
+          const search = window.location.search;
+          window.history.replaceState(null, '', path + search);
+        });
       }
-    });
+    };
+
+    initializeAuth();
 
     // Listen for changes on auth state (sign in, sign out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
       
-      // Handle OAuth callback
-      if (event === 'SIGNED_IN' && session) {
-        // Clean up hash fragment from URL
-        if (window.location.hash) {
-          window.history.replaceState(null, '', window.location.pathname);
-        }
+      // Handle OAuth callback - clean up hash fragment after Supabase processes it
+      if (event === 'SIGNED_IN' && session && window.location.hash) {
+        // Clean up hash immediately after sign in
+        requestAnimationFrame(() => {
+          const path = window.location.pathname;
+          const search = window.location.search;
+          window.history.replaceState(null, '', path + search);
+        });
       }
     });
 
