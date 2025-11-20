@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
             const search = window.location.search;
             window.history.replaceState(null, '', path + search);
           }
-        }, 1000);
+        }, 100);
       }
     });
 

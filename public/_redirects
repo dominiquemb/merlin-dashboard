@@ -1,2 +1,4 @@
 /*    /index.html   200
+# Force no cache for index.html
+/index.html    /index.html   200!  Cache-Control: no-cache, no-store, must-revalidate
 
