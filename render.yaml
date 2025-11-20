@@ -3,7 +3,9 @@ services:
     name: merlin-dashboard-frontend
     buildCommand: npm install && npm run build
     staticPublishPath: build
-    # Render static sites automatically handle _redirects file for client-side routing
+    # Note: Client-side routing rewrite must be configured in Render Dashboard:
+    # Go to Settings > Redirects and Rewrites
+    # Add rule: Source: /*, Destination: /index.html, Action: Rewrite
 
 
 
