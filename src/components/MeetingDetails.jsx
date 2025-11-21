@@ -260,10 +260,9 @@ const MeetingDetails = ({ meeting }) => {
     return (
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-4xl space-y-6">
-          <div className="mb-4 flex items-start justify-between gap-4">
+          <div className="mb-4 flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">{meeting.title}</h1>
-              <p className="text-gray-600">Synced from your calendar</p>
+              <h1 className="text-2xl font-bold text-gray-900">{meeting.title}</h1>
             </div>
             <button
               onClick={handleShare}
@@ -354,7 +353,10 @@ const MeetingDetails = ({ meeting }) => {
                   </li>
                 ))
               ) : (
-                <li className="text-gray-500">Just you for now</li>
+                <li className="flex items-start gap-2 text-gray-500">
+                  <span className="mt-1.5 text-purple-600">•</span>
+                  <span>Just you</span>
+                </li>
               )}
             </ul>
 

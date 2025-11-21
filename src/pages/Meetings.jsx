@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import MeetingCard from '../components/MeetingCard';
@@ -434,6 +434,23 @@ const Meetings = () => {
   const [creditBalance, setCreditBalance] = useState(0);
   const navigate = useNavigate();
 
+  // Filter meetings by selected date
+  const getMeetingsForDate = useCallback((date) => {
+    if (!date || meetings.length === 0) return [];
+    
+    const targetDate = new Date(date);
+    targetDate.setHours(0, 0, 0, 0);
+    
+    return meetings.filter((meeting) => {
+      if (!meeting.startDate) return false;
+      
+      const meetingDate = new Date(meeting.startDate);
+      meetingDate.setHours(0, 0, 0, 0);
+      
+      return meetingDate.getTime() === targetDate.getTime();
+    });
+  }, [meetings]);
+
   const loadMeetings = useCallback(async () => {
     if (!user?.email) {
       setMeetings([]);
@@ -497,10 +514,14 @@ const Meetings = () => {
 
   const routerLocation = useLocation();
   
+  // Filter meetings for current date
+  const filteredMeetings = useMemo(() => getMeetingsForDate(currentDate), [getMeetingsForDate, currentDate]);
+
+  // Update selected meeting when date changes or meetings are filtered
   useEffect(() => {
     // Check if there's a selectedMeetingId in navigation state
     if (routerLocation.state?.selectedMeetingId) {
-      const meetingExists = meetings.find(m => m.id === routerLocation.state.selectedMeetingId);
+      const meetingExists = filteredMeetings.find(m => m.id === routerLocation.state.selectedMeetingId);
       if (meetingExists) {
         setSelectedMeetingId(routerLocation.state.selectedMeetingId);
         // Clear the state to avoid reselecting on re-render
@@ -509,13 +530,13 @@ const Meetings = () => {
       }
     }
     
-    // Default: select first meeting if available
-    if (meetings.length > 0) {
-      setSelectedMeetingId(meetings[0].id);
+    // Default: select first meeting for the current date if available
+    if (filteredMeetings.length > 0) {
+      setSelectedMeetingId(filteredMeetings[0].id);
     } else {
       setSelectedMeetingId(null);
     }
-  }, [meetings, routerLocation.state]);
+  }, [filteredMeetings, routerLocation.state]);
 
   const selectedMeeting = meetings.find((m) => m.id === selectedMeetingId);
 
@@ -611,6 +632,7 @@ const Meetings = () => {
     }
   };
 
+
   const renderMeetingsList = () => {
     if (isLoadingMeetings) {
       return (
@@ -628,16 +650,16 @@ const Meetings = () => {
       );
     }
 
-    if (meetings.length === 0) {
+    if (filteredMeetings.length === 0) {
       return (
         <div className="text-center py-12">
-          <p className="text-gray-500 mb-2">No meetings found for the next 30 days.</p>
+          <p className="text-gray-500 mb-2">No meetings found for {formatDate(currentDate)}.</p>
           <p className="text-gray-400 text-sm">Sync your calendar to pull in upcoming meetings.</p>
         </div>
       );
     }
 
-    return meetings.map((meeting) => (
+    return filteredMeetings.map((meeting) => (
       <MeetingCard
         key={meeting.id}
         meeting={meeting}

@@ -678,7 +678,8 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Upgrade Opportunities */}
+            {/* Upgrade Opportunities - COMMENTED OUT */}
+            {false && (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <FiZap className="w-6 h-6 text-yellow-500" />
@@ -861,6 +862,7 @@ const Dashboard = () => {
               );
             })()}
             </div>
+            )}
           </div>
         </div>
       </main>
