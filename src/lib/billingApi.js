@@ -235,3 +235,33 @@ export const createSubscription = async (plan, successUrl, cancelUrl) => {
     throw error;
   }
 };
+
+/**
+ * Update auto renewal preference
+ * Note: This is a preference flag only and does NOT cancel the Stripe subscription
+ */
+export const updateAutoRenewal = async (autoRenewalEnabled) => {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/stripe/subscription/auto-renewal`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        auto_renewal_enabled: autoRenewalEnabled,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to update auto renewal preference');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating auto renewal preference:', error);
+    throw error;
+  }
+};

@@ -15,6 +15,7 @@ import {
   getCreditTransactions,
   getSubscriptionStatus,
   createSubscription,
+  updateAutoRenewal,
 } from "../lib/billingApi";
 
 const Billing = () => {
@@ -26,6 +27,7 @@ const Billing = () => {
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [isUpdatingAutoRenewal, setIsUpdatingAutoRenewal] = useState(false);
 
   const subscriptionPlans = useMemo(() => [
     {
@@ -149,13 +151,20 @@ const Billing = () => {
       } catch (error) {
         console.error("Error fetching subscription status:", error);
         // Default to free plan if error
-        setSubscriptionStatus({ plan: "free", status: "active", credits_remaining: creditBalance });
+        setSubscriptionStatus(prev => ({ 
+          ...prev, 
+          plan: "free", 
+          status: "active", 
+          credits_remaining: creditBalance, 
+          auto_renewal_enabled: true 
+        }));
       } finally {
         setIsLoadingSubscription(false);
       }
     };
 
     fetchSubscription();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch transactions on mount
@@ -224,6 +233,28 @@ const Billing = () => {
     return plan.isCurrent || isSubscribing || plan.key === "free";
   };
 
+  const handleToggleAutoRenewal = async () => {
+    if (subscriptionStatus?.plan === "free") {
+      return; // No subscription to manage
+    }
+
+    const newValue = !subscriptionStatus?.auto_renewal_enabled;
+    
+    try {
+      setIsUpdatingAutoRenewal(true);
+      await updateAutoRenewal(newValue);
+      setSubscriptionStatus(prev => ({
+        ...prev,
+        auto_renewal_enabled: newValue
+      }));
+    } catch (error) {
+      console.error("Error updating auto renewal:", error);
+      alert("Failed to update auto renewal preference. Please try again.");
+    } finally {
+      setIsUpdatingAutoRenewal(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] via-[#f8f6f1] to-[#faf9f5]">
       <Navbar />
@@ -241,7 +272,7 @@ const Billing = () => {
 
         {/* Current Plan & Balance Section */}
         <div className="bg-accent-light border border-accent rounded-xl p-6 mb-6">
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
             {/* Current Plan */}
             <div>
               <p className="text-sm font-medium text-gray-600 mb-2">
@@ -292,6 +323,43 @@ const Billing = () => {
               </p>
             </div>
           </div>
+
+          {/* Auto Renewal Toggle */}
+          {subscriptionStatus?.plan !== "free" && (
+            <div className="border-t border-accent pt-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    Auto Renewal
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {subscriptionStatus?.auto_renewal_enabled 
+                      ? "Your subscription will automatically renew at the end of each billing period"
+                      : "Your subscription will not automatically renew. You'll need to manually renew when it expires"}
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleAutoRenewal}
+                  disabled={isUpdatingAutoRenewal || isLoadingSubscription}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    subscriptionStatus?.auto_renewal_enabled ? 'bg-primary' : 'bg-gray-300'
+                  }`}
+                  role="switch"
+                  aria-checked={subscriptionStatus?.auto_renewal_enabled}
+                  aria-label="Toggle auto renewal"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      subscriptionStatus?.auto_renewal_enabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Note: This is a preference setting and does not cancel your Stripe subscription. To cancel your subscription, please contact support.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Subscription Plans Section */}

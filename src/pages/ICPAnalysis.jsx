@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ICPMeetingCard from '../components/ICPMeetingCard';
 import CreditsBadge from '../components/CreditsBadge';
-import { FiAlertCircle, FiCalendar, FiCreditCard, FiRefreshCw, FiArrowRight, FiTarget, FiSettings, FiCheckCircle, FiTrendingUp, FiFilter } from 'react-icons/fi';
+import { FiAlertCircle, FiCalendar, FiCreditCard, FiRefreshCw, FiArrowRight, FiTarget, FiSettings, FiTrendingUp, FiFilter } from 'react-icons/fi';
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -23,6 +23,7 @@ const getAuthToken = async () => {
 
 const ICPAnalysis = () => {
   const navigate = useNavigate();
+  // eslint-disable-next-line no-unused-vars
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isLoadingMeetings, setIsLoadingMeetings] = useState(true);
   const [hasEnrichedMeetings, setHasEnrichedMeetings] = useState(true);
@@ -30,11 +31,14 @@ const ICPAnalysis = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [icpFitMeetings, setIcpFitMeetings] = useState([]);
   const [nonIcpMeetings, setNonIcpMeetings] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [totalNonIcpCount, setTotalNonIcpCount] = useState(0);
+  // eslint-disable-next-line no-unused-vars
   const [totalAnalyzedCount, setTotalAnalyzedCount] = useState(0);
   const [icpCriteria, setIcpCriteria] = useState(null);
   const [isLoadingCriteria, setIsLoadingCriteria] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'high', 'medium', 'low'
+  // Only show low ICP meetings - no need for filter
+  // const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'high', 'medium', 'low'
   const [timeframe, setTimeframe] = useState('week'); // 'week', 'month'
   const [avgIcpScoreData, setAvgIcpScoreData] = useState({ current: null, change: null });
 
@@ -599,18 +603,9 @@ const ICPAnalysis = () => {
 
   const categorizedMeetings = categorizeMeetings();
   
-  // Get filtered meetings based on active filter
+  // Only show low ICP meetings
   const getFilteredMeetings = () => {
-    switch (activeFilter) {
-      case 'high':
-        return categorizedMeetings.highFit;
-      case 'medium':
-        return categorizedMeetings.mediumFit;
-      case 'low':
-        return categorizedMeetings.lowFit;
-      default:
-        return categorizedMeetings.all;
-    }
+    return categorizedMeetings.lowFit;
   };
 
   const filteredMeetings = getFilteredMeetings();
@@ -678,6 +673,7 @@ const ICPAnalysis = () => {
     }
   }, [icpFitMeetings, nonIcpMeetings, isLoadingMeetings]);
 
+  // eslint-disable-next-line no-unused-vars
   const handleGenerateAnalysis = async () => {
     setIsAnalyzing(true);
     setErrorMessage('');
@@ -738,16 +734,15 @@ const ICPAnalysis = () => {
               />
             </div>
             <button
-              onClick={handleGenerateAnalysis}
-              disabled={isAnalyzing}
-              className="flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-xl font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => navigate('/icp-settings')}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition"
             >
-              <FiRefreshCw className={`w-5 h-5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              {isAnalyzing ? 'Analyzing...' : 'Generate ICP Focus'}
+              <FiSettings className="w-4 h-4" />
+              Update ICP Settings
             </button>
           </div>
           <p className="text-gray-600">
-            Prioritize high-value opportunities and optimize your pipeline
+            Cancel low ICP meetings to focus on higher value opportunities
           </p>
         </div>
 
@@ -779,29 +774,14 @@ const ICPAnalysis = () => {
             </div>
           </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-4 gap-4 mb-4">
-            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-              <div className="text-3xl font-bold text-gray-900 mb-1">{categorizedMeetings.all.length}</div>
-              <div className="text-sm text-gray-600">Total Meetings</div>
-            </div>
-            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-1">
-                <FiCheckCircle className="w-5 h-5 text-green-600" />
-                <div className="text-3xl font-bold text-gray-900">{categorizedMeetings.highFit.length}</div>
-              </div>
-              <div className="text-sm text-gray-600">High Fit (12+)</div>
-            </div>
-            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-              <div className="text-3xl font-bold text-gray-900 mb-1">{categorizedMeetings.mediumFit.length}</div>
-              <div className="text-sm text-gray-600">Medium Fit (7-11)</div>
-            </div>
+          {/* KPI Cards - Only show Low Fit */}
+          <div className="grid grid-cols-1 gap-4 mb-4">
             <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-1">
                 <FiAlertCircle className="w-5 h-5 text-red-600" />
                 <div className="text-3xl font-bold text-gray-900">{categorizedMeetings.lowFit.length}</div>
               </div>
-              <div className="text-sm text-gray-600">Low Fit (&lt;7)</div>
+              <div className="text-sm text-gray-600">Low Fit Meetings (&lt;7)</div>
             </div>
           </div>
 
@@ -822,7 +802,8 @@ const ICPAnalysis = () => {
           </div>
         </div>
 
-        {/* Smart Recommendations Section */}
+        {/* Smart Recommendations Section - Only show Low Fit */}
+        {/* COMMENTED OUT - Only showing low ICP meetings
         <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Smart Recommendations</h3>
           <div className="grid grid-cols-3 gap-4">
@@ -858,11 +839,13 @@ const ICPAnalysis = () => {
             </div>
           </div>
         </div>
+        */}
 
-        {/* Filter Buttons */}
+        {/* Filter Buttons - Commented out, only showing low ICP meetings */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
-            <button
+            {/* Filter buttons commented out - only showing low ICP meetings */}
+            {/* <button
               onClick={() => setActiveFilter('all')}
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 activeFilter === 'all'
@@ -901,7 +884,10 @@ const ICPAnalysis = () => {
               }`}
             >
               Low Fit ({categorizedMeetings.lowFit.length})
-            </button>
+            </button> */}
+            <div className="text-sm text-gray-600">
+              Showing {categorizedMeetings.lowFit.length} low ICP meetings
+            </div>
           </div>
           <button
             onClick={() => navigate('/icp-settings')}
@@ -1003,10 +989,10 @@ const ICPAnalysis = () => {
           </div>
         )}
 
-        {/* No meetings for selected filter */}
+        {/* No low ICP meetings */}
         {!isLoadingMeetings && filteredMeetings.length === 0 && categorizedMeetings.all.length > 0 && (
           <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-12 text-center">
-            <p className="text-gray-600">No meetings match the selected filter.</p>
+            <p className="text-gray-600">No low ICP meetings to cancel. All your meetings are high or medium fit.</p>
         </div>
         )}
 
@@ -1017,10 +1003,10 @@ const ICPAnalysis = () => {
               <FiAlertCircle className="w-8 h-8 text-blue-600" />
             </div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              No ICP Focus Available
+              No Low ICP Meetings
             </h3>
             <p className="text-gray-600 mb-4">
-              Click "Generate ICP Focus" to analyze your upcoming meetings against your Ideal Customer Profile.
+              No low ICP meetings found. All your meetings are high or medium fit.
             </p>
           </div>
         )}
@@ -1097,13 +1083,6 @@ const ICPAnalysis = () => {
             </div>
           )}
 
-          <button
-            onClick={() => navigate('/icp-settings')}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition"
-          >
-            <FiSettings className="w-4 h-4" />
-            Update ICP Settings
-          </button>
         </div>
       </main>
     </div>
