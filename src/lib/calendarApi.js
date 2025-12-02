@@ -62,6 +62,7 @@ export const syncUserCalendar = async (daysAhead = 7) => {
         },
         body: JSON.stringify({
           days_ahead: daysAhead,
+          use_perplexity: false, // Disable Perplexity for calendar sync
         }),
         signal: controller.signal,
       });
