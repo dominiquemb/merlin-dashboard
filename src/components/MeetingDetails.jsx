@@ -13,6 +13,9 @@ import {
   FiShare2,
   FiCheck,
   FiX,
+  FiFileText,
+  FiGlobe,
+  FiSettings,
 } from 'react-icons/fi';
 
 const formatDateTime = (date) =>
@@ -30,7 +33,7 @@ const ResearchDetails = ({ meeting }) => {
   if (!hasResearch) {
     return (
       <div className="space-y-6">
-        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
           <div className="flex items-center gap-2 mb-4">
             <FiTrendingUp className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold text-gray-900">Research</h2>
@@ -46,88 +49,215 @@ const ResearchDetails = ({ meeting }) => {
   return (
     <div className="space-y-6">
       {attendeeDetails.length > 0 && (
-        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <FiUsers className="w-5 h-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Enriched Attendee Profiles</h2>
-          </div>
           <div className="space-y-6">
-            {attendeeDetails.map((attendee, index) => (
-              <div
-                key={index}
-                className="flex items-start gap-4 border border-gray-100 rounded-2xl p-4 bg-white/40"
-              >
-                <div className="w-14 h-14 bg-primary rounded-full flex items-center justify-center text-white font-semibold text-lg flex-shrink-0">
-                  {attendee.initials}
-                </div>
-                <div className="flex-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-900">{attendee.name}</h3>
-                      {attendee.title && <p className="text-sm text-gray-600">{attendee.title}</p>}
-                      <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                        <FiBriefcase className="w-4 h-4" />
-                        <span>{attendee.company}</span>
+          {attendeeDetails.map((attendee, index) => {
+            // Extract enriched data from briefing source
+            const briefingSource = meeting?.briefingSource || meeting?.briefing_source;
+            const enrichedSource = meeting?.enrichedSource || meeting?.enriched_source;
+            const enrichedCompanies = enrichedSource?.companies || {};
+            const briefingCompanies = briefingSource?.companies || {};
+            
+            // Find matching attendee data
+            let enrichedAttendee = null;
+            let currentPositions = [];
+            let previousPositions = [];
+            let tenureMonths = null;
+            let currentRoleStartDate = null;
+            
+            Object.entries(briefingCompanies).forEach(([companyName, companyData]) => {
+              const enrichedAttendees = enrichedCompanies[companyName]?.attendees || [];
+              const briefingAttendees = companyData?.attendees || [];
+              
+              // Try to match by email or name
+              const match = briefingAttendees.find((a) => {
+                const attendeeEmail = attendee.email?.toLowerCase();
+                const aEmail = (a?.profile?.email || a?.email || '').toLowerCase();
+                if (attendeeEmail && aEmail && attendeeEmail === aEmail) return true;
+                
+                const attendeeName = attendee.name?.toLowerCase();
+                const aName = [a?.profile?.name?.first, a?.profile?.name?.last].filter(Boolean).join(' ').toLowerCase();
+                if (attendeeName && aName && attendeeName === aName) return true;
+                
+                return false;
+              });
+              
+              if (match) {
+                const enrichedMatch = enrichedAttendees.find((ea) => {
+                  const eaEmail = (ea?.email_address || '').toLowerCase();
+                  const matchEmail = (match?.profile?.email || match?.email || '').toLowerCase();
+                  return eaEmail && matchEmail && eaEmail === matchEmail;
+                });
+                
+                if (enrichedMatch) {
+                  enrichedAttendee = enrichedMatch;
+                  currentPositions = enrichedMatch?.current_positions || [];
+                  previousPositions = enrichedMatch?.previous_positions || [];
+                  tenureMonths = enrichedMatch?.current_role_tenure_months;
+                  currentRoleStartDate = enrichedMatch?.current_role_start_date;
+                }
+              }
+            });
+            
+            // Calculate tenure string
+            let tenureStr = null;
+            if (tenureMonths) {
+              const years = Math.floor(tenureMonths / 12);
+              const months = tenureMonths % 12;
+              if (years > 0 && months > 0) {
+                tenureStr = `${years} year${years > 1 ? 's' : ''}, ${months} month${months > 1 ? 's' : ''}`;
+              } else if (years > 0) {
+                tenureStr = `${years} year${years > 1 ? 's' : ''}`;
+              } else if (months > 0) {
+                tenureStr = `${months} month${months > 1 ? 's' : ''}`;
+              }
+            }
+            
+            // Get previous role
+            const previousRole = previousPositions.length > 0 ? previousPositions[0] : null;
+            const previousRoleStr = previousRole 
+              ? `${previousRole.title || 'Previous Role'}${previousRole.company_name ? ` - ${previousRole.company_name}` : ''}`
+              : null;
+            
+            // Build biography from available data
+            const biographyParts = [];
+            if (attendee.title && attendee.company) {
+              biographyParts.push(`${attendee.name} is the ${attendee.title} of ${attendee.company}`);
+            } else if (attendee.title) {
+              biographyParts.push(`${attendee.name} is the ${attendee.title}`);
+            } else if (attendee.company) {
+              biographyParts.push(`${attendee.name} works at ${attendee.company}`);
+            }
+            
+            if (attendee.company && enrichedAttendee) {
+              // Try to get company location from briefing source
+              const companyData = Object.values(briefingCompanies).find(cd => 
+                cd?.company_info?.name === attendee.company
+              );
+              const companyLocation = companyData?.company_info?.headquarters;
+              let locationStr = '';
+              if (companyLocation) {
+                if (typeof companyLocation === 'string') {
+                  locationStr = companyLocation;
+                } else if (typeof companyLocation === 'object') {
+                  const parts = [
+                    companyLocation.city,
+                    companyLocation.state,
+                    companyLocation.country
+                  ].filter(Boolean);
+                  locationStr = parts.join(', ');
+                }
+              }
+              
+              if (locationStr) {
+                biographyParts[0] += `, a company based in ${locationStr}`;
+              }
+            }
+            
+            if (tenureStr) {
+              biographyParts.push(`With ${tenureStr} of tenure`);
+            }
+            
+            if (previousRoleStr) {
+              biographyParts.push(`previously worked at ${previousRoleStr}`);
+            }
+            
+            if (enrichedAttendee?.headline) {
+              biographyParts.push(enrichedAttendee.headline);
+            }
+            
+            const biography = biographyParts.length > 0 ? biographyParts.join('. ') + '.' : attendee.summary || '';
+            
+            return (
+              <div key={index} className="bg-white border border-gray-100 rounded-2xl p-6">
+                <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">{attendee.name}</h3>
+                
+                {/* Key Information Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {attendee.company && (
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                        <FiBriefcase className="w-5 h-5 text-gray-900" />
                       </div>
-                      {attendee.location && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                          <FiMapPin className="w-4 h-4" />
-                          <span>{attendee.location}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                      {attendee.email && (
-                        <a href={`mailto:${attendee.email}`} className="flex items-center gap-1 hover:text-primary">
-                          <FiMail className="w-4 h-4" />
-                          <span>{attendee.email}</span>
-                        </a>
-                      )}
-                      {attendee.phone && (
-                        <a href={`tel:${attendee.phone}`} className="flex items-center gap-1 hover:text-primary">
-                          <FiPhone className="w-4 h-4" />
-                          <span>{attendee.phone}</span>
-                        </a>
-                      )}
-                      {attendee.linkedin && (
-                        <a
-                          href={attendee.linkedin}
+                      <p className="text-xs text-gray-900 mb-0.5">Company</p>
+                        <a 
+                          href={attendee.linkedin ? attendee.linkedin.replace(/\/in\/.*/, '/company/' + attendee.company.toLowerCase().replace(/\s+/g, '-')) : '#'}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 hover:text-primary"
+                          className="text-sm font-medium text-blue-600 hover:underline"
                         >
-                          <FiLinkedin className="w-4 h-4" />
-                          <span>LinkedIn</span>
+                          {attendee.company}
                         </a>
-                      )}
-                    </div>
-                  </div>
-                  {attendee.summary && (
-                    <p className="text-sm text-gray-600 mb-2">{attendee.summary}</p>
+                      </div>
                   )}
-                  {Array.isArray(attendee.similarities) && attendee.similarities.length > 0 && (
-                    <ul className="text-xs text-gray-500 space-y-1">
-                      {attendee.similarities.map((similarity, simIndex) => {
-                        if (!similarity) return null;
-                        const text =
-                          typeof similarity === 'string'
-                            ? similarity
-                            : similarity.description || similarity.summary || similarity.text || '';
-                        if (!text) return null;
-                        return <li key={simIndex}>• {text}</li>;
-                      })}
-                    </ul>
+                  
+                  {attendee.title && (
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                        <FiBriefcase className="w-5 h-5 text-gray-900" />
+                      </div>
+                      <p className="text-xs text-gray-900 mb-0.5">Job Title</p>
+                      <p className="text-sm font-medium text-gray-500">{attendee.title}</p>
+                        </div>
+                      )}
+                  
+                  {tenureStr && (
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                        <FiCalendar className="w-5 h-5 text-gray-900" />
+                      </div>
+                      <p className="text-xs text-gray-900 mb-0.5">Tenure</p>
+                      <p className="text-sm font-medium text-gray-500">{tenureStr}</p>
+                    </div>
+                  )}
+                  
+                  {attendee.location && (
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                        <FiMapPin className="w-5 h-5 text-gray-900" />
+                      </div>
+                      <p className="text-xs text-gray-900 mb-0.5">Location</p>
+                      <p className="text-sm font-medium text-gray-500">{attendee.location}</p>
+                    </div>
+                  )}
+                  
+                  {previousRoleStr && (
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                        <FiBriefcase className="w-5 h-5 text-gray-900" />
+                      </div>
+                      <p className="text-xs text-gray-900 mb-0.5">Previous Role</p>
+                      <p className="text-sm font-medium text-gray-500">{previousRoleStr}</p>
+                  </div>
+                  )}
+                  
+                  {/* Decision-making Authority - placeholder if we have data */}
+                  {enrichedAttendee?.decision_making_authority && (
+                    <div className="flex flex-col items-center text-center">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                        <FiInfo className="w-5 h-5 text-gray-900" />
+                      </div>
+                      <p className="text-xs text-gray-900 mb-0.5">Decision-making Authority</p>
+                      <p className="text-sm font-medium text-gray-500">{enrichedAttendee.decision_making_authority}</p>
+                    </div>
                   )}
                 </div>
+                
+                {/* Detailed Biography */}
+                {biography && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Detailed Biography</h4>
+                    <p className="text-sm text-gray-700 leading-relaxed">{biography}</p>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
 
       {insights.length > 0 && (
-        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <FiTrendingUp className="w-5 h-5 text-primary" />
             <h2 className="text-lg font-semibold text-gray-900">Key Insights</h2>
           </div>
@@ -143,8 +273,8 @@ const ResearchDetails = ({ meeting }) => {
       )}
 
       {recentActivity.length > 0 && (
-        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <div className="flex items-center justify-center gap-2 mb-4">
             <FiClock className="w-5 h-5 text-purple-600" />
             <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
           </div>
@@ -159,41 +289,133 @@ const ResearchDetails = ({ meeting }) => {
         </div>
       )}
 
-      {companyInfo && (
-        <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <FiBriefcase className="w-5 h-5 text-green-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Company Information</h2>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4 text-sm text-gray-700">
-            <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Company Size</p>
-              <p className="font-medium text-gray-900">{companyInfo.size || 'Unknown'}</p>
+      {companyInfo && (() => {
+        // Extract company data from briefing source if available
+        const briefingSource = meeting?.briefingSource || meeting?.briefing_source;
+        const briefingCompanies = briefingSource?.companies || {};
+        const companyName = Object.keys(briefingCompanies)[0] || companyInfo.name || 'Unknown Company';
+        const companyData = briefingCompanies[companyName] || {};
+        const companyInfoBlock = companyData?.company_info || {};
+        
+        const founded = companyInfoBlock.founded || companyInfo.founded || null;
+        const headquarters = companyInfoBlock.headquarters || companyInfo.headquarters || null;
+        const employeeCount = companyInfoBlock.employee_count || companyInfoBlock.company_size || companyInfo.size || null;
+        const industry = companyInfoBlock.industry || companyInfo.industry || null;
+        const description = companyInfoBlock.description || companyInfo.description || null;
+        const markets = companyInfoBlock.markets || companyInfoBlock.key_markets || companyInfo.markets || null;
+        
+        // Format headquarters
+        let headquartersStr = null;
+        if (headquarters) {
+          if (typeof headquarters === 'string') {
+            headquartersStr = headquarters;
+          } else if (typeof headquarters === 'object') {
+            const parts = [
+              headquarters.city,
+              headquarters.state,
+              headquarters.country
+            ].filter(Boolean);
+            headquartersStr = parts.length > 0 ? parts.join(', ') : null;
+          }
+        }
+        
+        // Format founded year
+        let foundedYear = null;
+        if (founded) {
+          if (typeof founded === 'string') {
+            foundedYear = founded;
+          } else if (typeof founded === 'object' && founded.year) {
+            foundedYear = founded.year.toString();
+          } else if (typeof founded === 'number') {
+            foundedYear = founded.toString();
+          }
+        }
+        
+        return (
+          <div className="bg-white border border-gray-100 rounded-2xl p-6">
+            <h2 className="text-sm font-thin text-gray-900 mb-6 text-center uppercase tracking-wide">COMPANY INFORMATION</h2>
+            
+            {/* Company Name */}
+            <div className="mb-6 text-center">
+              <h3 className="text-2xl font-semibold text-gray-900">
+                <span className="underline">{companyName.split(' - ')[0]}</span>
+                {companyName.includes(' - ') && (
+                  <span className="text-gray-600"> - {companyName.split(' - ').slice(1).join(' - ')}</span>
+                )}
+              </h3>
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Industry</p>
-              <p className="font-medium text-gray-900">{companyInfo.industry || 'Unknown'}</p>
+            
+            {/* Key Information Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              {foundedYear && (
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                    <FiCalendar className="w-5 h-5 text-gray-900" />
+                  </div>
+                  <p className="text-xs text-gray-900 mb-0.5">Founded</p>
+                  <p className="text-sm font-medium text-gray-500">{foundedYear}</p>
+                </div>
+              )}
+              
+              {headquartersStr && (
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                    <FiMapPin className="w-5 h-5 text-gray-900" />
+                  </div>
+                  <p className="text-xs text-gray-900 mb-0.5">Headquarters</p>
+                  <p className="text-sm font-medium text-gray-500">{headquartersStr}</p>
+                </div>
+              )}
+              
+              {employeeCount && (
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                    <FiUsers className="w-5 h-5 text-gray-900" />
+                  </div>
+                  <p className="text-xs text-gray-900 mb-0.5">No. of Employees</p>
+                  <p className="text-sm font-medium text-gray-500">{employeeCount}</p>
+                </div>
+              )}
+              
+              {industry && (
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                    <FiSettings className="w-5 h-5 text-gray-900" />
+                  </div>
+                  <p className="text-xs text-gray-900 mb-0.5">Industry</p>
+                  <p className="text-sm font-medium text-gray-500">{industry}</p>
+                </div>
+              )}
             </div>
-            <div>
-              <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Revenue Model</p>
-              <p className="font-medium text-gray-900">{companyInfo.revenue || 'Unknown'}</p>
+            
+            {/* Description */}
+            {description && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <FiFileText className="w-5 h-5 text-gray-900" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Description</h4>
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed">{description}</p>
             </div>
-            {companyInfo.website && (
+            )}
+            
+            {/* Markets */}
+            {markets && (
               <div>
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">Website</p>
-                <a
-                  href={companyInfo.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  {companyInfo.website}
-                </a>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <FiGlobe className="w-5 h-5 text-gray-900" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Markets</h4>
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed">{markets}</p>
               </div>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
@@ -300,7 +522,7 @@ const MeetingDetails = ({ meeting }) => {
             </button>
           </div>
 
-          <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+          <div className="bg-white border border-gray-100 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <FiCalendar className="w-5 h-5 text-primary" />
               <h2 className="text-lg font-semibold text-gray-900">Meeting overview</h2>
@@ -339,7 +561,7 @@ const MeetingDetails = ({ meeting }) => {
             </div>
           </div>
 
-          <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+          <div className="bg-white border border-gray-100 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <FiUsers className="w-5 h-5 text-purple-600" />
               <h2 className="text-lg font-semibold text-gray-900">Attendees</h2>
@@ -384,7 +606,7 @@ const MeetingDetails = ({ meeting }) => {
           </div>
 
           {description && (
-            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+            <div className="bg-white border border-gray-100 rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <FiInfo className="w-5 h-5 text-primary" />
                 <h2 className="text-lg font-semibold text-gray-900">Agenda / Description</h2>
