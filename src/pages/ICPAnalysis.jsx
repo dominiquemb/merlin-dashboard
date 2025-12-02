@@ -128,73 +128,73 @@ const ICPAnalysis = () => {
     }
   };
 
-  // TEMPORARY FILLER DATA - TO BE REMOVED AFTER TESTING
-  const fillerMeetings = [
-    {
-      id: 'filler-1',
-      title: 'Connectd Intro Call',
-      date: '24 September',
-      time: '8:30 AM',
-      company: 'DESIGN UNITED',
-      platform: 'Google Meet',
-      attendees: [
-        { name: 'Natalie Blackshaw', initials: 'NB', jobTitle: 'Creative Director' }
-      ],
-      icpScore: { score: 3, maxScore: 15 },
-      fitsIcp: false,
-      icpReasons: [],
-      nonIcpReasons: ['Employee count 1'],
-      concerns: ['Employee count 1'],
-      criteriaBreakdown: [],
-      positiveSignals: [],
-    },
-    {
-      id: 'filler-2',
-      title: 'Connectd Intro Call',
-      date: '24 September',
-      time: '10:15 AM',
-      company: 'Workmaite Limited',
-      platform: 'Zoom',
-      attendees: [
-        { name: 'Darryll Minton', initials: 'DM', jobTitle: 'Co-Founder' }
-      ],
-      icpScore: { score: 2, maxScore: 15 },
-      fitsIcp: false,
-      icpReasons: [],
-      nonIcpReasons: ['Founded in 2025', 'Employee count 1'],
-      concerns: ['Founded in 2025', 'Employee count 1'],
-      criteriaBreakdown: [],
-      positiveSignals: [],
-    },
-    {
-      id: 'filler-3',
-      title: 'Product Demo',
-      date: '25 September',
-      time: '2:00 PM',
-      company: 'TechStart Inc',
-      platform: 'Microsoft Teams',
-      attendees: [
-        { name: 'Sarah Johnson', initials: 'SJ', jobTitle: 'VP of Sales' }
-      ],
-      icpScore: { score: 4, maxScore: 15 },
-      fitsIcp: false,
-      icpReasons: [],
-      nonIcpReasons: ['Employee count 5', 'Founded in 2024'],
-      concerns: ['Employee count 5', 'Founded in 2024'],
-      criteriaBreakdown: [],
-      positiveSignals: [],
-    },
-  ];
+  // TEMPORARY FILLER DATA - COMMENTED OUT FOR FUTURE TESTING
+  // const fillerMeetings = [
+  //   {
+  //     id: 'filler-1',
+  //     title: 'Connectd Intro Call',
+  //     date: '24 September',
+  //     time: '8:30 AM',
+  //     company: 'DESIGN UNITED',
+  //     platform: 'Google Meet',
+  //     attendees: [
+  //       { name: 'Natalie Blackshaw', initials: 'NB', jobTitle: 'Creative Director' }
+  //     ],
+  //     icpScore: { score: 3, maxScore: 15 },
+  //     fitsIcp: false,
+  //     icpReasons: [],
+  //     nonIcpReasons: ['Employee count 1'],
+  //     concerns: ['Employee count 1'],
+  //     criteriaBreakdown: [],
+  //     positiveSignals: [],
+  //   },
+  //   {
+  //     id: 'filler-2',
+  //     title: 'Connectd Intro Call',
+  //     date: '24 September',
+  //     time: '10:15 AM',
+  //     company: 'Workmaite Limited',
+  //     platform: 'Zoom',
+  //     attendees: [
+  //       { name: 'Darryll Minton', initials: 'DM', jobTitle: 'Co-Founder' }
+  //     ],
+  //     icpScore: { score: 2, maxScore: 15 },
+  //     fitsIcp: false,
+  //     icpReasons: [],
+  //     nonIcpReasons: ['Founded in 2025', 'Employee count 1'],
+  //     concerns: ['Founded in 2025', 'Employee count 1'],
+  //     criteriaBreakdown: [],
+  //     positiveSignals: [],
+  //   },
+  //   {
+  //     id: 'filler-3',
+  //     title: 'Product Demo',
+  //     date: '25 September',
+  //     time: '2:00 PM',
+  //     company: 'TechStart Inc',
+  //     platform: 'Microsoft Teams',
+  //     attendees: [
+  //       { name: 'Sarah Johnson', initials: 'SJ', jobTitle: 'VP of Sales' }
+  //     ],
+  //     icpScore: { score: 4, maxScore: 15 },
+  //     fitsIcp: false,
+  //     icpReasons: [],
+  //     nonIcpReasons: ['Employee count 5', 'Founded in 2024'],
+  //     concerns: ['Employee count 5', 'Founded in 2024'],
+  //     criteriaBreakdown: [],
+  //     positiveSignals: [],
+  //   },
+  // ];
 
   // Fetch enriched meetings with ICP analysis
   const fetchMeetingsWithICP = async () => {
     setIsLoadingMeetings(true);
     
-    // TEMPORARY: Always use filler data for testing - TO BE REMOVED AFTER TESTING
-    setNonIcpMeetings(fillerMeetings);
-    setHasEnrichedMeetings(true);
-    setIsLoadingMeetings(false);
-    return;
+    // TEMPORARY: Uncomment below to use filler data for testing
+    // setNonIcpMeetings(fillerMeetings);
+    // setHasEnrichedMeetings(true);
+    // setIsLoadingMeetings(false);
+    // return;
     
     try {
       const token = await getAuthToken();
@@ -265,17 +265,18 @@ const ICPAnalysis = () => {
         setNonIcpMeetings(nonIcp);
         setHasEnrichedMeetings(true);
       } else {
-        // TEMPORARY: Use filler data if no real meetings - TO BE REMOVED AFTER TESTING
-        setNonIcpMeetings(fillerMeetings);
-        setHasEnrichedMeetings(true);
+        setHasEnrichedMeetings(false);
+        // TEMPORARY: Uncomment below to use filler data if no real meetings
+        // setNonIcpMeetings(fillerMeetings);
+        // setHasEnrichedMeetings(true);
       }
     } catch (error) {
       console.error('Error fetching meetings with ICP:', error);
       console.error('Error details:', error.message);
       setErrorMessage(`Failed to load meetings: ${error.message}`);
-      // TEMPORARY: Use filler data on error too - TO BE REMOVED AFTER TESTING
-      setNonIcpMeetings(fillerMeetings);
-      setHasEnrichedMeetings(true);
+      // TEMPORARY: Uncomment below to use filler data on error
+      // setNonIcpMeetings(fillerMeetings);
+      // setHasEnrichedMeetings(true);
     } finally {
       setIsLoadingMeetings(false);
     }
@@ -734,20 +735,21 @@ const ICPAnalysis = () => {
 
       if (result.success && result.criteria) {
         setIcpCriteria(result.criteria);
-      } else {
-        // TEMPORARY FILLER DATA - TO BE REMOVED AFTER TESTING
-        setIcpCriteria({
-          employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
-          founded_years: ['1-3 years', 'More than 3 years'],
-        });
       }
+      // TEMPORARY: Uncomment below to use filler criteria data
+      // else {
+      //   setIcpCriteria({
+      //     employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
+      //     founded_years: ['1-3 years', 'More than 3 years'],
+      //   });
+      // }
     } catch (error) {
       console.error('Error fetching ICP criteria:', error);
-      // TEMPORARY FILLER DATA - TO BE REMOVED AFTER TESTING
-      setIcpCriteria({
-        employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
-        founded_years: ['1-3 years', 'More than 3 years'],
-      });
+      // TEMPORARY: Uncomment below to use filler criteria data on error
+      // setIcpCriteria({
+      //   employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
+      //   founded_years: ['1-3 years', 'More than 3 years'],
+      // });
     } finally {
       setIsLoadingCriteria(false);
     }
@@ -1131,16 +1133,6 @@ const ICPAnalysis = () => {
               </div>
             </div>
           )}
-
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={() => navigate('/icp-settings')}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition"
-            >
-              <FiSettings className="w-4 h-4" />
-              Update ICP Settings
-            </button>
-          </div>
         </div>
 
       </main>
