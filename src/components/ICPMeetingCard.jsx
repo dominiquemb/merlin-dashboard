@@ -9,36 +9,39 @@ const ICPMeetingCard = ({ meeting }) => {
   const isMediumFit = meeting.icpScore && meeting.icpScore.score >= 7 && meeting.icpScore.score < 12;
   const icpScore = meeting.icpScore?.score || 0;
 
-  // Format date for display
-  const formatDate = (dateStr) => {
+  // Format date for display - "24 September @ 8:30 AM GMT"
+  const formatDate = (dateStr, timeStr) => {
     if (!dateStr) return '';
     try {
-      // Handle different date formats
       let date;
       if (typeof dateStr === 'string') {
-        // Try parsing as a date string
         date = new Date(dateStr);
         if (isNaN(date.getTime())) {
-          // If it's already formatted like "Jan 1, 2024", return as-is
           return dateStr;
         }
       } else {
         date = dateStr;
       }
       
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      today.setHours(0, 0, 0, 0);
-      tomorrow.setHours(0, 0, 0, 0);
-      date.setHours(0, 0, 0, 0);
+      const day = date.getDate();
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                          'July', 'August', 'September', 'October', 'November', 'December'];
+      const month = monthNames[date.getMonth()];
       
-      if (date.getTime() === today.getTime()) {
-        return 'Today';
-      } else if (date.getTime() === tomorrow.getTime()) {
-        return 'Tomorrow';
+      // Format time if provided
+      let timeDisplay = '';
+      if (timeStr) {
+        timeDisplay = ` @ ${timeStr} GMT`;
+      } else if (date.getHours() !== undefined) {
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = minutes.toString().padStart(2, '0');
+        timeDisplay = ` @ ${displayHours}:${displayMinutes} ${ampm} GMT`;
       }
-      return dateStr;
+      
+      return `${day} ${month}${timeDisplay}`;
     } catch (e) {
       return dateStr;
     }
@@ -105,154 +108,95 @@ const ICPMeetingCard = ({ meeting }) => {
   console.log('ICPMeetingCard - Final concerns:', concerns);
   console.log('ICPMeetingCard - Final criteriaBreakdown:', criteriaBreakdown);
 
+  // Get contact person from attendees
+  const getContactPerson = () => {
+    if (!meeting.attendees || meeting.attendees.length === 0) {
+      return null;
+    }
+    const firstAttendee = meeting.attendees[0];
+    if (typeof firstAttendee === 'object' && firstAttendee.name) {
+      // Try to get job title from meeting data if available
+      const jobTitle = firstAttendee.jobTitle || firstAttendee.job_title || firstAttendee.title || '';
+      return {
+        name: firstAttendee.name,
+        jobTitle: jobTitle
+      };
+    }
+    if (typeof firstAttendee === 'string') {
+      return {
+        name: firstAttendee,
+        jobTitle: ''
+      };
+    }
+    return null;
+  };
+
+  const contactPerson = getContactPerson();
+
   return (
-    <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mb-4">
-      {/* Company Name and ICP Score */}
-      <div className="flex items-center gap-3 mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{meeting.company || meeting.title}</h3>
-        {icpScore > 0 && (
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-            isIcpFit ? 'bg-green-100 text-green-700' : 
-            isMediumFit ? 'bg-yellow-100 text-yellow-700' : 
-            'bg-red-100 text-red-700'
-          }`}>
-            ICP {icpScore}/{meeting.icpScore?.maxScore || 15}
-          </span>
+    <div className="bg-white border border-gray-200 rounded-xl p-6 mb-4">
+      {/* Date, Meeting Name, and Attendee on same line */}
+      <div className="text-sm text-gray-900 mb-3 flex items-center flex-wrap">
+        <span>{formatDate(meeting.date, meeting.time)}</span>
+        <span className="ml-2">•</span>
+        <span className="ml-2">{meeting.title || meeting.platform || 'Meeting'}</span>
+        {formatAttendees() && (
+          <>
+            <span className="ml-2">-</span>
+            <span className="ml-2 text-gray-800 font-medium">{formatAttendees().toLowerCase()}</span>
+          </>
+        )}
+        {meeting.company && (
+          <>
+            <span className="ml-2">({meeting.company.toLowerCase()})</span>
+          </>
         )}
       </div>
 
-      {/* Meeting Details - Single Row, Evenly Spaced */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="flex items-center gap-1 text-sm text-gray-600">
-          <FiClock className="w-4 h-4" />
-          <span>{formatDate(meeting.date)} {meeting.time}</span>
-        </div>
-        <div className="flex items-center gap-1 text-sm text-gray-600">
-          <FiVideo className="w-4 h-4" />
-          <span>{meeting.platform || 'Meeting'}</span>
-        </div>
-        <div className="flex items-center gap-1 text-sm text-gray-600">
-          <FiUsers className="w-4 h-4" />
-          <span>{formatAttendees()}</span>
-        </div>
+      {/* Company Name */}
+      <div className="text-lg font-semibold text-gray-900 mb-2 uppercase">
+        {meeting.company || 'Unknown Company'}
       </div>
 
-      {/* Criteria Breakdown, Positive Signals, and Concerns */}
-      {(criteriaBreakdown.length > 0 || positiveSignals.length > 0 || concerns.length > 0 || (meeting.reasons && meeting.reasons.length > 0) || (meeting.nonIcpReasons && meeting.nonIcpReasons.length > 0)) && (
-        <div className="mb-6">
-          {/* Criteria Breakdown - ALWAYS show if there are criteria or reasons */}
-          {(criteriaBreakdown.length > 0 || (meeting.reasons && meeting.reasons.length > 0)) && (
-            <>
-              <h4 className="font-semibold text-gray-900 mb-3">Criteria Breakdown</h4>
-              {criteriaBreakdown.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {criteriaBreakdown.map((criterion, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm">
-                      {criterion.matches !== false && criterion.matches !== undefined ? (
-                        <FiCheckCircle className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <FiX className="w-4 h-4 text-red-600" />
-                      )}
-                      <span className="text-gray-700">
-                        {criterion.label}: {criterion.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : meeting.reasons && meeting.reasons.length > 0 && (
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  {meeting.reasons.filter(r => typeof r === 'string').slice(0, 4).map((reason, idx) => {
-                    // Try to parse criteria from reason text with colon: "Size: 414"
-                    let criteriaMatch = reason.match(/(Size|Region|Budget|Industry|Growth):\s*(.+)/i);
-                    if (criteriaMatch) {
-                      return (
-                        <div key={idx} className="flex items-center gap-2 text-sm">
-                          {isIcpFit ? (
-                            <FiCheckCircle className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <FiX className="w-4 h-4 text-red-600" />
-                          )}
-                          <span className="text-gray-700">
-                            {criteriaMatch[1]}: {criteriaMatch[2]}
-                          </span>
-                        </div>
-                      );
-                    }
-                    
-                    // Try to parse "Employee count 414" format (no colon)
-                    const employeeCountMatch = reason.match(/employee\s+count\s+(\d+)/i);
-                    if (employeeCountMatch) {
-                      return (
-                        <div key={idx} className="flex items-center gap-2 text-sm">
-                          {isIcpFit ? (
-                            <FiCheckCircle className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <FiX className="w-4 h-4 text-red-600" />
-                          )}
-                          <span className="text-gray-700">
-                            Size: {employeeCountMatch[1]}
-                          </span>
-                        </div>
-                      );
-                    }
-                    
-                    return null;
-                  }).filter(Boolean)}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Positive Signals */}
-          {positiveSignals.length > 0 && (
-            <div className="mb-3">
-              <p className="text-sm font-medium text-green-700 mb-2">Positive Signals:</p>
-              <div className="flex flex-wrap gap-2">
-                {positiveSignals.map((signal, idx) => (
-                  <span key={idx} className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
-                    {signal}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Concerns - ALWAYS show if there are any */}
-          {concerns.length > 0 && (
-            <div className="mb-4">
-              <h4 className="font-semibold text-gray-900 mb-2">Concerns</h4>
-              <div className="flex flex-wrap gap-2">
-                {concerns.map((concern, idx) => (
-                  <span key={idx} className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-medium">
-                    {concern}
-                  </span>
-                ))}
-              </div>
-            </div>
+      {/* Contact Person */}
+      {contactPerson && (
+        <div className="text-sm text-gray-700 mb-4">
+          {contactPerson.name}
+          {contactPerson.jobTitle && (
+            <span>, <span className="italic font-normal">{contactPerson.jobTitle}</span></span>
           )}
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-3">
-        <button 
-          onClick={() => navigate('/meetings', { state: { selectedMeetingId: meeting.id } })}
-          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition text-sm"
-        >
-          View Brief
-        </button>
-        <button 
-          onClick={() => navigate('/data-enrichment')}
-          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition text-sm"
-        >
-          Enrich Data
-        </button>
-        {!isIcpFit && (
-          <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-            Consider Delegating
-          </span>
-        )}
-      </div>
+      {/* Why it's not relevant - Yellow Box */}
+      {concerns.length > 0 && (
+        <div className="rounded-lg p-4 mb-4" style={{ backgroundColor: '#FEF3C7' }}>
+          <p className="text-sm font-semibold mb-2" style={{ color: '#92400E' }}>Why it's not relevant:</p>
+          <ul className="space-y-1">
+            {concerns.map((concern, idx) => {
+              // Format concern text to match screenshot format
+              let formattedConcern = concern;
+              
+              // Handle "Employee count 1" format - capitalize properly
+              if (concern.match(/employee\s+count\s+\d+/i)) {
+                formattedConcern = concern.replace(/employee\s+count/i, 'Employee count');
+              }
+              // Handle "Founded in 2025" format - ensure proper capitalization
+              if (concern.match(/founded\s+in/i)) {
+                formattedConcern = concern.replace(/founded\s+in/i, 'Founded in');
+              }
+              
+              return (
+                <li key={idx} className="text-sm flex items-start" style={{ color: '#92400E' }}>
+                  <span className="mr-2">•</span>
+                  <span>{formattedConcern}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
     </div>
   );
 };

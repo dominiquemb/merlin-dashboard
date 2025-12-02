@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ICPMeetingCard from '../components/ICPMeetingCard';
 import CreditsBadge from '../components/CreditsBadge';
-import { FiAlertCircle, FiCalendar, FiCreditCard, FiRefreshCw, FiArrowRight, FiTarget, FiSettings, FiTrendingUp, FiFilter } from 'react-icons/fi';
+import { FiAlertCircle, FiCalendar, FiCreditCard, FiRefreshCw, FiArrowRight, FiTarget, FiSettings, FiTrendingUp, FiFilter, FiBriefcase, FiZap } from 'react-icons/fi';
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -128,9 +128,74 @@ const ICPAnalysis = () => {
     }
   };
 
+  // TEMPORARY FILLER DATA - TO BE REMOVED AFTER TESTING
+  const fillerMeetings = [
+    {
+      id: 'filler-1',
+      title: 'Connectd Intro Call',
+      date: '24 September',
+      time: '8:30 AM',
+      company: 'DESIGN UNITED',
+      platform: 'Google Meet',
+      attendees: [
+        { name: 'Natalie Blackshaw', initials: 'NB', jobTitle: 'Creative Director' }
+      ],
+      icpScore: { score: 3, maxScore: 15 },
+      fitsIcp: false,
+      icpReasons: [],
+      nonIcpReasons: ['Employee count 1'],
+      concerns: ['Employee count 1'],
+      criteriaBreakdown: [],
+      positiveSignals: [],
+    },
+    {
+      id: 'filler-2',
+      title: 'Connectd Intro Call',
+      date: '24 September',
+      time: '10:15 AM',
+      company: 'Workmaite Limited',
+      platform: 'Zoom',
+      attendees: [
+        { name: 'Darryll Minton', initials: 'DM', jobTitle: 'Co-Founder' }
+      ],
+      icpScore: { score: 2, maxScore: 15 },
+      fitsIcp: false,
+      icpReasons: [],
+      nonIcpReasons: ['Founded in 2025', 'Employee count 1'],
+      concerns: ['Founded in 2025', 'Employee count 1'],
+      criteriaBreakdown: [],
+      positiveSignals: [],
+    },
+    {
+      id: 'filler-3',
+      title: 'Product Demo',
+      date: '25 September',
+      time: '2:00 PM',
+      company: 'TechStart Inc',
+      platform: 'Microsoft Teams',
+      attendees: [
+        { name: 'Sarah Johnson', initials: 'SJ', jobTitle: 'VP of Sales' }
+      ],
+      icpScore: { score: 4, maxScore: 15 },
+      fitsIcp: false,
+      icpReasons: [],
+      nonIcpReasons: ['Employee count 5', 'Founded in 2024'],
+      concerns: ['Employee count 5', 'Founded in 2024'],
+      criteriaBreakdown: [],
+      positiveSignals: [],
+    },
+  ];
+
   // Fetch enriched meetings with ICP analysis
   const fetchMeetingsWithICP = async () => {
     setIsLoadingMeetings(true);
+    
+    // TEMPORARY: Always use filler data for testing - TO BE REMOVED AFTER TESTING
+    setNonIcpMeetings(fillerMeetings);
+    setHasEnrichedMeetings(true);
+    setIsLoadingMeetings(false);
+    return;
+    
     try {
       const token = await getAuthToken();
       const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
@@ -200,12 +265,17 @@ const ICPAnalysis = () => {
         setNonIcpMeetings(nonIcp);
         setHasEnrichedMeetings(true);
       } else {
-        setHasEnrichedMeetings(false);
+        // TEMPORARY: Use filler data if no real meetings - TO BE REMOVED AFTER TESTING
+        setNonIcpMeetings(fillerMeetings);
+        setHasEnrichedMeetings(true);
       }
     } catch (error) {
       console.error('Error fetching meetings with ICP:', error);
       console.error('Error details:', error.message);
       setErrorMessage(`Failed to load meetings: ${error.message}`);
+      // TEMPORARY: Use filler data on error too - TO BE REMOVED AFTER TESTING
+      setNonIcpMeetings(fillerMeetings);
+      setHasEnrichedMeetings(true);
     } finally {
       setIsLoadingMeetings(false);
     }
@@ -264,10 +334,26 @@ const ICPAnalysis = () => {
     };
 
     const attendeesList = extractAttendees(event.attendees, userEmail);
-    const attendees = attendeesList.map(name => {
-        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-      return { name, initials };
+    
+    // Try to extract job titles from briefing_source
+    let attendeeJobTitles = {};
+    if (event.briefing_source && event.briefing_source.companies) {
+      Object.values(event.briefing_source.companies).forEach(companyData => {
+        if (companyData.attendees && Array.isArray(companyData.attendees)) {
+          companyData.attendees.forEach(attendee => {
+            if (attendee.name && attendee.job_title) {
+              attendeeJobTitles[attendee.name] = attendee.job_title;
+            }
+          });
+        }
       });
+    }
+    
+    const attendees = attendeesList.map(name => {
+      const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+      const jobTitle = attendeeJobTitles[name] || null;
+      return { name, initials, jobTitle };
+    });
     
     // Extract company from briefing_source
     let company = 'Unknown';
@@ -648,9 +734,20 @@ const ICPAnalysis = () => {
 
       if (result.success && result.criteria) {
         setIcpCriteria(result.criteria);
+      } else {
+        // TEMPORARY FILLER DATA - TO BE REMOVED AFTER TESTING
+        setIcpCriteria({
+          employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
+          founded_years: ['1-3 years', 'More than 3 years'],
+        });
       }
     } catch (error) {
       console.error('Error fetching ICP criteria:', error);
+      // TEMPORARY FILLER DATA - TO BE REMOVED AFTER TESTING
+      setIcpCriteria({
+        employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
+        founded_years: ['1-3 years', 'More than 3 years'],
+      });
     } finally {
       setIsLoadingCriteria(false);
     }
@@ -723,84 +820,52 @@ const ICPAnalysis = () => {
       <Navbar />
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        {/* Header with Tabs */}
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-900">ICP Focus</h1>
-              <CreditsBadge
-                text="1 credit/analysis"
-                icon={<FiCreditCard />}
-              />
-            </div>
-            <button
-              onClick={() => navigate('/icp-settings')}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition"
-            >
-              <FiSettings className="w-4 h-4" />
-              Update ICP Settings
-            </button>
+          <div className="flex items-center justify-center mb-6">
+            <h1 className="text-3xl font-bold text-gray-900">Your Weekly ICP Report</h1>
           </div>
-          <p className="text-gray-600">
-            Cancel low ICP meetings to focus on higher value opportunities
-          </p>
         </div>
 
-        {/* Pipeline Health Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Pipeline Health</h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setTimeframe('week')}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  timeframe === 'week'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                This Week
-              </button>
-              <button
-                onClick={() => setTimeframe('month')}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  timeframe === 'month'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                This Month
-              </button>
-            </div>
-          </div>
-
-          {/* KPI Cards - Only show Low Fit */}
-          <div className="grid grid-cols-1 gap-4 mb-4">
-            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-              <div className="flex items-center gap-2 mb-1">
-                <FiAlertCircle className="w-5 h-5 text-red-600" />
-                <div className="text-3xl font-bold text-gray-900">{categorizedMeetings.lowFit.length}</div>
-              </div>
-              <div className="text-sm text-gray-600">Low Fit Meetings (&lt;7)</div>
-            </div>
-          </div>
-
-          {/* Pipeline Quality Banner */}
-          <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-            <div className="flex items-center gap-3">
-              <FiTrendingUp className="w-6 h-6 text-green-600" />
-              <div>
-                <p className="font-semibold text-gray-900">Pipeline quality improving</p>
-                <p className="text-sm text-gray-600">
-                  Avg ICP score: {calculateAvgIcpScore()}
-                  {formatPercentageChange() && (
-                    <span> ({formatPercentageChange()} vs last week)</span>
-                  )}
-                </p>
+        {/* Summary Section - Light Blue */}
+        {!isLoadingMeetings && nonIcpMeetings.length > 0 && (
+          <div className="rounded-xl p-6 mb-8" style={{ backgroundColor: '#DBEAFE', border: '1px solid #93C5FD' }}>
+            <p className="text-lg italic mb-4" style={{ color: '#1E40AF' }}>
+              We found <span className="font-bold">{nonIcpMeetings.length}</span> meetings in the upcoming week that <span className="font-bold">do not</span> match your ICP.
+            </p>
+            <div className="mt-4">
+              <p className="text-sm font-bold mb-2" style={{ color: '#1E40AF' }}>Your specific criteria:</p>
+              <div className="space-y-1 text-sm" style={{ color: '#1E40AF' }}>
+                {icpCriteria && icpCriteria.employee_sizes && icpCriteria.employee_sizes.length > 0 && (
+                  <p>
+                    <span className="font-medium">Employee size:</span>{' '}
+                    {Array.isArray(icpCriteria.employee_sizes)
+                      ? icpCriteria.employee_sizes.map(size => {
+                          // Map backend format to display format
+                          const sizeMap = {
+                            '1-10': '1 - 10',
+                            '11-50': '11 - 50',
+                            '51-100': '51-100',
+                            '101-500': '101-500',
+                            '500+': '500+',
+                          };
+                          return sizeMap[size] || size;
+                        }).join(', ')
+                      : icpCriteria.employee_sizes}
+                  </p>
+                )}
+                {icpCriteria && icpCriteria.founded_years && icpCriteria.founded_years.length > 0 && (
+                  <p>
+                    <span className="font-medium">Founded years:</span>{' '}
+                    {Array.isArray(icpCriteria.founded_years)
+                      ? icpCriteria.founded_years.join(', ')
+                      : icpCriteria.founded_years}
+                  </p>
+                )}
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Smart Recommendations Section - Only show Low Fit */}
         {/* COMMENTED OUT - Only showing low ICP meetings
@@ -841,62 +906,6 @@ const ICPAnalysis = () => {
         </div>
         */}
 
-        {/* Filter Buttons - Commented out, only showing low ICP meetings */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            {/* Filter buttons commented out - only showing low ICP meetings */}
-            {/* <button
-              onClick={() => setActiveFilter('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                activeFilter === 'all'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              All Meetings ({categorizedMeetings.all.length})
-            </button>
-            <button
-              onClick={() => setActiveFilter('high')}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                activeFilter === 'high'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              High Fit ({categorizedMeetings.highFit.length})
-            </button>
-            <button
-              onClick={() => setActiveFilter('medium')}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                activeFilter === 'medium'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Medium Fit ({categorizedMeetings.mediumFit.length})
-            </button>
-            <button
-              onClick={() => setActiveFilter('low')}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                activeFilter === 'low'
-                  ? 'bg-gray-900 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Low Fit ({categorizedMeetings.lowFit.length})
-            </button> */}
-            <div className="text-sm text-gray-600">
-              Showing {categorizedMeetings.lowFit.length} low ICP meetings
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('/icp-settings')}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
-          >
-            <FiFilter className="w-4 h-4" />
-            Edit ICP Criteria
-          </button>
-        </div>
 
         {/* No Enriched Meetings Message */}
         {!hasEnrichedMeetings && (
@@ -956,29 +965,6 @@ const ICPAnalysis = () => {
           </div>
         )}
 
-        {/* Non-ICP Meetings Alert Summary */}
-        {!isLoadingMeetings && nonIcpMeetings.length > 0 && (
-        <div className="bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-red-500 rounded-xl flex items-center justify-center flex-shrink-0">
-              <FiAlertCircle className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900 mb-1">
-                Meetings That Don't Fit Your ICP
-              </h2>
-              <p className="text-lg text-gray-700 mb-2">
-                  <span className="font-bold">{nonIcpMeetings.length} meetings</span>{' '}
-                <span className="text-gray-600">this week</span>
-              </p>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <FiCalendar className="w-4 h-4" />
-                <span>{weekRange}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        )}
 
         {/* Meeting Cards - Filtered */}
         {!isLoadingMeetings && filteredMeetings.length > 0 && (
@@ -1011,7 +997,7 @@ const ICPAnalysis = () => {
           </div>
         )}
 
-        {/* Your ICP Criteria Section - Emphasizing Pipeline Health */}
+        {/* Your ICP Criteria Section */}
         <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mt-8">
           <div className="flex items-center gap-2 mb-4">
             <FiTarget className="w-5 h-5 text-purple-600" />
@@ -1078,12 +1064,85 @@ const ICPAnalysis = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-500 mb-4">No ICP criteria configured yet.</p>
+            <div className="space-y-4 p-4 bg-white border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-600 mb-4">Set criteria to identify which meetings align with your target customer profile</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <FiBriefcase className="w-4 h-4" />
+                    Number of Employees (select all that apply)
+                  </label>
+                  <div className="space-y-2">
+                    {['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001+'].map(range => (
+                      <label key={range} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed">
+                        <input
+                          type="checkbox"
+                          disabled
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                        />
+                        <span className="text-sm text-gray-700">{range} employees</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <FiTarget className="w-4 h-4" />
+                    Year Founded (select all that apply)
+                  </label>
+                  <div className="space-y-2">
+                    {['0-2', '3-5', '6-10', '11-20', '20+'].map(years => (
+                      <label key={years} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed">
+                        <input
+                          type="checkbox"
+                          disabled
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                        />
+                        <span className="text-sm text-gray-700">Founded {years} years ago</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                    <FiZap className="w-4 h-4" />
+                    Other (Optional)
+                    <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold">Beta</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Additional criteria..."
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => navigate('/icp-settings')}
+                  className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition"
+                >
+                  Configure ICP Criteria
+                </button>
+              </div>
             </div>
           )}
 
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={() => navigate('/icp-settings')}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition"
+            >
+              <FiSettings className="w-4 h-4" />
+              Update ICP Settings
+            </button>
+          </div>
         </div>
+
       </main>
     </div>
   );
