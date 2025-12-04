@@ -441,14 +441,70 @@ const Meetings = () => {
     const targetDate = new Date(date);
     targetDate.setHours(0, 0, 0, 0);
     
-    return meetings.filter((meeting) => {
-      if (!meeting.startDate) return false;
+    const targetEventId = '7po140m877gb54ifk53q0tt2hf';
+    const targetMeeting = meetings.find(m => m.id === targetEventId);
+    
+    const filtered = meetings.filter((meeting) => {
+      if (!meeting.startDate) {
+        if (meeting.id === targetEventId) {
+          console.log('❌ [Meetings] Target meeting has no startDate:', meeting);
+        }
+        return false;
+      }
       
       const meetingDate = new Date(meeting.startDate);
       meetingDate.setHours(0, 0, 0, 0);
       
-      return meetingDate.getTime() === targetDate.getTime();
+      // Compare by date components to avoid timezone issues
+      const matches = meetingDate.getFullYear() === targetDate.getFullYear() &&
+                      meetingDate.getMonth() === targetDate.getMonth() &&
+                      meetingDate.getDate() === targetDate.getDate();
+      
+      if (meeting.id === targetEventId) {
+        console.log('🔍 [Meetings] Target meeting date filter check:', {
+          meetingId: meeting.id,
+          meetingStartDateRaw: meeting.startDate,
+          meetingStartDateType: typeof meeting.startDate,
+          meetingDate: meetingDate.toString(),
+          meetingDateGetTime: meetingDate.getTime(),
+          meetingDateUTC: meetingDate.toISOString(),
+          meetingDateLocal: meetingDate.toLocaleDateString(),
+          targetDate: targetDate.toString(),
+          targetDateGetTime: targetDate.getTime(),
+          targetDateUTC: targetDate.toISOString(),
+          targetDateLocal: targetDate.toLocaleDateString(),
+          matches,
+          meetingYear: meetingDate.getFullYear(),
+          meetingMonth: meetingDate.getMonth(),
+          meetingDay: meetingDate.getDate(),
+          targetYear: targetDate.getFullYear(),
+          targetMonth: targetDate.getMonth(),
+          targetDay: targetDate.getDate(),
+          // Check if dates match by year/month/day (ignoring time)
+          datesMatchByComponents: meetingDate.getFullYear() === targetDate.getFullYear() &&
+                                 meetingDate.getMonth() === targetDate.getMonth() &&
+                                 meetingDate.getDate() === targetDate.getDate(),
+        });
+      }
+      
+      return matches;
     });
+    
+    if (targetMeeting) {
+      const isInFiltered = filtered.find(m => m.id === targetEventId);
+      if (!isInFiltered) {
+        console.log('❌ [Meetings] Target meeting filtered out by date filter', {
+          totalMeetings: meetings.length,
+          filteredCount: filtered.length,
+          targetMeetingStartDate: targetMeeting.startDate,
+          targetDate: targetDate.toString(),
+        });
+      } else {
+        console.log('✅ [Meetings] Target meeting passed date filter');
+      }
+    }
+    
+    return filtered;
   }, [meetings]);
 
   const loadMeetings = useCallback(async () => {
@@ -469,7 +525,40 @@ const Meetings = () => {
         return;
       }
 
-      const transformed = transformEventsToMeetings(response.data?.events || [], user.email);
+      const events = response.data?.events || [];
+      console.log('📥 [Meetings] Received events from API:', events.length);
+      
+      // Debug: Check for the specific event
+      const targetEventId = '7po140m877gb54ifk53q0tt2hf';
+      const targetEvent = events.find(e => e.event_id === targetEventId);
+      if (targetEvent) {
+        console.log('✅ [Meetings] Target event found in API response:', {
+          event_id: targetEvent.event_id,
+          start: targetEvent.start,
+          ready_to_send: targetEvent.enriched_ready_to_send,
+          attendees: targetEvent.attendees,
+        });
+      } else {
+        console.log('❌ [Meetings] Target event NOT found in API response');
+        console.log('   Available event IDs:', events.map(e => e.event_id));
+      }
+      
+      const transformed = transformEventsToMeetings(events, user.email);
+      console.log('🔄 [Meetings] Transformed meetings:', transformed.length);
+      
+      // Debug: Check if target event is in transformed meetings
+      const targetMeeting = transformed.find(m => m.id === targetEventId);
+      if (targetMeeting) {
+        console.log('✅ [Meetings] Target meeting found in transformed:', {
+          id: targetMeeting.id,
+          startDate: targetMeeting.startDate,
+          startDateString: targetMeeting.startDate?.toString(),
+          readyToSend: targetMeeting.readyToSend,
+        });
+      } else {
+        console.log('❌ [Meetings] Target meeting NOT found in transformed meetings');
+      }
+      
       setMeetings(transformed);
 
       // Check for insufficient credits for verification
@@ -515,7 +604,14 @@ const Meetings = () => {
   const routerLocation = useLocation();
   
   // Filter meetings for current date
-  const filteredMeetings = useMemo(() => getMeetingsForDate(currentDate), [getMeetingsForDate, currentDate]);
+  const filteredMeetings = useMemo(() => {
+    console.log('📅 [Meetings] Filtering meetings for date:', {
+      currentDate: currentDate.toString(),
+      currentDateGetTime: new Date(currentDate).setHours(0, 0, 0, 0),
+      totalMeetings: meetings.length,
+    });
+    return getMeetingsForDate(currentDate);
+  }, [getMeetingsForDate, currentDate, meetings.length]);
 
   // Update selected meeting when date changes or meetings are filtered
   useEffect(() => {
@@ -562,6 +658,11 @@ const Meetings = () => {
   const goToNextDay = () => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() + 1);
+    console.log('📅 [Meetings] Navigating to next day:', {
+      from: currentDate.toString(),
+      to: newDate.toString(),
+      toDateString: newDate.toDateString(),
+    });
     setCurrentDate(newDate);
   };
 

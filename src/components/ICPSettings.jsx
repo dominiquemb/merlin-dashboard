@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FiChevronDown, FiChevronUp, FiMail, FiMessageSquare, FiBriefcase, FiTarget, FiZap, FiCreditCard } from 'react-icons/fi';
 import CreditsBadge from './CreditsBadge';
+import AddSettingsModal from './AddSettingsModal';
+import { createSetting, exchangeOAuthCode } from '../lib/settingsApi';
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -32,6 +34,84 @@ const ICPSettings = () => {
   const [employeeRanges, setEmployeeRanges] = useState([]);
   const [yearsFounded, setYearsFounded] = useState([]);
   const [customQuestion, setCustomQuestion] = useState('');
+  const [isSlackModalOpen, setIsSlackModalOpen] = useState(false);
+
+  // Handle OAuth return when component mounts
+  useEffect(() => {
+    const handleOAuthReturn = async () => {
+      console.log('ICPSettings mounted, checking for OAuth return...');
+      console.log('Current URL:', window.location.href);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const oauthReturn = urlParams.get('oauth_return');
+      const code = urlParams.get('code');
+      const error = urlParams.get('error');
+      
+      // Check if user returned from OAuth (they navigated back manually)
+      const oauthInProgress = localStorage.getItem('settings_oauth_in_progress');
+      
+      if (oauthReturn === 'true' || oauthInProgress === 'true') {
+        console.log('User returned from OAuth flow');
+        
+        // Try to get the token from merlin-core-app's localStorage via iframe/postMessage
+        // Since we can't access cross-origin localStorage, we'll need the user to manually
+        // copy the token or we'll need to use a different approach
+        
+        // For now, show a message asking user to copy the token
+        if (oauthInProgress === 'true') {
+          setSaveMessage('⚠️ OAuth completed. Please check merlin-core-app dashboard for your JWT token, or use email/password login instead.');
+          setTimeout(() => setSaveMessage(''), 10000);
+          localStorage.removeItem('settings_oauth_in_progress');
+          localStorage.removeItem('settings_oauth_provider');
+          localStorage.removeItem('settings_oauth_return_url');
+        }
+        
+        // Clean up URL
+        if (oauthReturn === 'true') {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        return;
+      }
+      
+      if (error) {
+        console.error('OAuth error:', error);
+        setSaveMessage(`❌ OAuth authentication failed: ${error}`);
+        setTimeout(() => setSaveMessage(''), 5000);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+      
+      if (code) {
+        console.log('✅ OAuth callback detected with code:', code.substring(0, 20) + '...');
+        try {
+          const response = await exchangeOAuthCode(code);
+          console.log('OAuth exchange response:', response);
+          if (!response.error) {
+            console.log('✅ OAuth authentication successful, token stored');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Open the modal if it was in progress
+            if (oauthInProgress === 'true') {
+              console.log('Reopening Slack modal after OAuth');
+              setIsSlackModalOpen(true);
+              localStorage.removeItem('settings_oauth_in_progress');
+              localStorage.removeItem('settings_oauth_provider');
+              localStorage.removeItem('settings_oauth_return_url');
+            }
+          } else {
+            console.error('❌ OAuth exchange failed:', response.message);
+            setSaveMessage(`❌ OAuth authentication failed: ${response.message}`);
+            setTimeout(() => setSaveMessage(''), 5000);
+          }
+        } catch (error) {
+          console.error('❌ Error handling OAuth callback:', error);
+          setSaveMessage(`❌ Error during OAuth authentication: ${error.message}`);
+          setTimeout(() => setSaveMessage(''), 5000);
+        }
+      }
+    };
+
+    handleOAuthReturn();
+  }, []);
 
   // Custom insights questions organized by category
   const [selectedQuestions, setSelectedQuestions] = useState({
@@ -277,6 +357,32 @@ const ICPSettings = () => {
     }
   };
 
+  const handleAddSettingsSubmit = async (formData) => {
+    try {
+      const response = await createSetting(formData);
+      if (response.requiresLogin) {
+        // The modal will handle showing the login form
+        setSaveMessage('⚠️ Please login to the settings API in the modal');
+        setTimeout(() => setSaveMessage(''), 5000);
+        return;
+      }
+      if (!response.error) {
+        setSaveMessage('✅ Slack webhook settings added successfully!');
+        setIsSlackModalOpen(false);
+        // Enable Slack delivery channel after successful setup
+        setDeliveryChannels(prev => ({ ...prev, slack: true }));
+        setTimeout(() => setSaveMessage(''), 3000);
+      } else {
+        setSaveMessage(`❌ ${response.message || 'Failed to add settings'}`);
+        setTimeout(() => setSaveMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error adding settings:', error);
+      setSaveMessage('❌ Failed to add settings. Please try again.');
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Section 1: Send my insights to + Custom Insights */}
@@ -303,7 +409,8 @@ const ICPSettings = () => {
             </button>
 
             <button
-              onClick={() => setDeliveryChannels(prev => ({ ...prev, slack: !prev.slack }))}
+              type="button"
+              onClick={() => setIsSlackModalOpen(true)}
               className={`p-4 rounded-lg border-2 transition ${
                 deliveryChannels.slack
                   ? 'border-primary bg-blue-50'
@@ -536,6 +643,19 @@ const ICPSettings = () => {
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
+
+      {/* Add Settings Modal */}
+      <AddSettingsModal
+        isOpen={isSlackModalOpen}
+        onClose={() => setIsSlackModalOpen(false)}
+        onSubmit={handleAddSettingsSubmit}
+        initialData={{
+          vendor: 'slack',
+          title: '',
+          channel: '',
+          hook_url: ''
+        }}
+      />
     </div>
   );
 };
