@@ -7,7 +7,7 @@ import CreditsBadge from '../components/CreditsBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { syncUserCalendar, fetchCalendarEvents } from '../lib/calendarApi';
 import { getCreditBalance } from '../lib/billingApi';
-import { FiChevronLeft, FiChevronRight, FiCreditCard, FiRefreshCw, FiCheck, FiX, FiLink, FiAlertCircle } from 'react-icons/fi';
+import { FiChevronLeft, FiChevronRight, FiCreditCard, FiRefreshCw, FiCheck, FiX, FiLink, FiAlertCircle, FiInfo, FiClock } from 'react-icons/fi';
 
 const parseDateTime = (value) => {
   if (!value) return null;
@@ -432,6 +432,7 @@ const Meetings = () => {
   const [syncMessage, setSyncMessage] = useState('');
   const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
   const [creditBalance, setCreditBalance] = useState(0);
+  const [showOnboardingMessage, setShowOnboardingMessage] = useState(false);
   const navigate = useNavigate();
 
   // Filter meetings by selected date
@@ -694,6 +695,10 @@ const Meetings = () => {
         const eventsCount = result.data.events_synced || 0;
         setSyncStatus('success');
         setSyncMessage(`Synced ${eventsCount} meeting${eventsCount !== 1 ? 's' : ''}!`);
+        
+        // Show onboarding message after successful sync
+        setShowOnboardingMessage(true);
+        
         // Wait a moment for database to be ready, then reload
         setTimeout(async () => {
           await loadMeetings();
@@ -788,6 +793,32 @@ const Meetings = () => {
                 icon={<FiCreditCard />}
               />
             </div>
+
+            {/* Onboarding Message - shown after calendar sync */}
+            {showOnboardingMessage && (
+              <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <FiClock className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                      Agent Onboarding in Progress
+                    </h4>
+                    <p className="text-xs text-blue-800 leading-relaxed">
+                      The agent is now onboarding and will be ready to generate your insights in 24 hours.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowOnboardingMessage(false)}
+                    className="flex-shrink-0 text-blue-400 hover:text-blue-600 transition-colors"
+                    aria-label="Dismiss message"
+                  >
+                    <FiX className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Reminder Text */}
             <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
