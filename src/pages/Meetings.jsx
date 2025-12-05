@@ -674,25 +674,40 @@ const Meetings = () => {
   };
 
   const handleSyncCalendar = async () => {
+    console.log('🔍 [DEBUG] [Meetings] handleSyncCalendar called');
+    console.log('🔍 [DEBUG] [Meetings] User object:', user);
+    console.log('🔍 [DEBUG] [Meetings] User email:', user?.email);
+    
     if (!user?.email) {
+      console.error('❌ [DEBUG] [Meetings] No user email found');
       setSyncStatus('error');
       setSyncMessage('Not logged in');
       setTimeout(() => setSyncStatus(null), 3000);
       return;
     }
 
-    console.log('🔄 [Meetings] Sync button clicked, starting sync...');
+    console.log('🔄 [DEBUG] [Meetings] Sync button clicked, starting sync...');
+    console.log('🔍 [DEBUG] [Meetings] User email for sync:', user.email);
     setIsSyncing(true);
     setSyncStatus(null);
     setSyncMessage('');
 
     try {
-      console.log('🔄 [Meetings] Calling syncUserCalendar...');
+      console.log('🔄 [DEBUG] [Meetings] Calling syncUserCalendar with daysAhead=7...');
+      console.log('🔍 [DEBUG] [Meetings] About to call syncUserCalendar function');
       const result = await syncUserCalendar(7);
-      console.log('📡 [Meetings] Sync result:', result);
+      console.log('📡 [DEBUG] [Meetings] Sync result received:', result);
+      console.log('🔍 [DEBUG] [Meetings] Result type:', typeof result);
+      console.log('🔍 [DEBUG] [Meetings] Result keys:', result ? Object.keys(result) : 'null');
+      console.log('🔍 [DEBUG] [Meetings] Result.success:', result?.success);
+      console.log('🔍 [DEBUG] [Meetings] Result.data:', result?.data);
+      console.log('🔍 [DEBUG] [Meetings] Result.error:', result?.error);
 
       if (result.success) {
-        const eventsCount = result.data.events_synced || 0;
+        console.log('✅ [DEBUG] [Meetings] Sync was successful');
+        const eventsCount = result.data?.events_synced || 0;
+        console.log('🔍 [DEBUG] [Meetings] Events synced count:', eventsCount);
+        console.log('🔍 [DEBUG] [Meetings] Result.data object:', result.data);
         setSyncStatus('success');
         setSyncMessage(`Synced ${eventsCount} meeting${eventsCount !== 1 ? 's' : ''}!`);
         
@@ -701,6 +716,7 @@ const Meetings = () => {
         
         // Wait a moment for database to be ready, then reload
         setTimeout(async () => {
+          console.log('🔍 [DEBUG] [Meetings] Reloading meetings after sync...');
           await loadMeetings();
         }, 500);
 
@@ -709,12 +725,17 @@ const Meetings = () => {
           setSyncMessage('');
         }, 3000);
       } else {
+        console.error('❌ [DEBUG] [Meetings] Sync failed');
+        console.log('🔍 [DEBUG] [Meetings] Result object:', result);
         const errorMsg = result.error || result.data?.error || '';
+        console.log('🔍 [DEBUG] [Meetings] Error message:', errorMsg);
 
         if (errorMsg.toLowerCase().includes('no auth token')) {
+          console.log('🔍 [DEBUG] [Meetings] No auth token error detected');
           setSyncStatus('no_auth');
           setSyncMessage('Calendar not connected');
         } else {
+          console.log('🔍 [DEBUG] [Meetings] Other error, setting error status');
           setSyncStatus('error');
           setSyncMessage(result.error || 'Failed to sync calendar');
 
@@ -725,7 +746,11 @@ const Meetings = () => {
         }
       }
     } catch (error) {
-      console.error('❌ [Meetings] Unexpected sync error:', error);
+      console.error('❌ [DEBUG] [Meetings] Unexpected sync error:', error);
+      console.error('🔍 [DEBUG] [Meetings] Error type:', typeof error);
+      console.error('🔍 [DEBUG] [Meetings] Error message:', error?.message);
+      console.error('🔍 [DEBUG] [Meetings] Error stack:', error?.stack);
+      console.error('🔍 [DEBUG] [Meetings] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       setSyncStatus('error');
       setSyncMessage('An unexpected error occurred');
 
@@ -734,6 +759,7 @@ const Meetings = () => {
         setSyncMessage('');
       }, 5000);
     } finally {
+      console.log('🔍 [DEBUG] [Meetings] Finally block - setting isSyncing to false');
       setIsSyncing(false);
     }
   };
@@ -879,7 +905,7 @@ const Meetings = () => {
                   ) : (
                     <>
                       <FiRefreshCw className="w-4 h-4" />
-                      <span>Sync Calendar</span>
+                      <span>Sync Calendar DEBUG</span>
                     </>
                   )}
                 </button>
