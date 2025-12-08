@@ -213,10 +213,28 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
           const normalized = normalizeText(newsItem);
           if (normalized) recentActivity.add(normalized);
         } else if (typeof newsItem === 'object') {
-          const headline = normalizeText(newsItem.headline || newsItem.title || '');
-          const summary = normalizeText(newsItem.summary || newsItem.description || '');
-          const combined = [headline, summary].filter(Boolean).join(' — ');
-          if (combined) recentActivity.add(combined);
+          // Use correct field names: title and snippet (matching email template)
+          const title = normalizeText(newsItem.title || '');
+          const snippet = normalizeText(newsItem.snippet || '');
+          // Format like email template: title (link) + snippet + source, date
+          const source = normalizeText(newsItem.source || '');
+          const date = normalizeText(newsItem.date || '');
+          const link = newsItem.link || '';
+          
+          // Build formatted news item similar to email template structure
+          let newsText = '';
+          if (title) {
+            newsText = title;
+          }
+          if (snippet) {
+            newsText = newsText ? `${newsText} — ${snippet}` : snippet;
+          }
+          if (source || date) {
+            const sourceDate = [source, date].filter(Boolean).join(', ');
+            newsText = newsText ? `${newsText} (${sourceDate})` : sourceDate;
+          }
+          
+          if (newsText) recentActivity.add(newsText);
         }
       });
     } else if (typeof recentNews === 'string') {
@@ -288,8 +306,18 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
 
       const post = attendee?.social_media?.linkedin_post;
       if (post?.content) {
-        const datePart = normalizeText(post.date || '');
-        const content = normalizeText(post.content);
+        // Format date like email template: only first 10 chars (date part, e.g., "2025-12-04")
+        const dateStr = post.date || '';
+        const datePart = dateStr ? dateStr.substring(0, 10) : '';
+        
+        // Truncate content to 350 chars like email template
+        const fullContent = normalizeText(post.content);
+        const content = fullContent.length > 350 
+          ? fullContent.substring(0, 350) + '...' 
+          : fullContent;
+        
+        // Format like email template: content, then "LinkedIn, date" on separate line
+        // For UI display, we'll combine but structure it clearly
         const engagementParts = [];
         if (post.engagement?.likes) {
           engagementParts.push(`${post.engagement.likes} likes`);
@@ -298,7 +326,10 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
           engagementParts.push(`${post.engagement.comments} comments`);
         }
         const engagement = engagementParts.length ? ` [${engagementParts.join(', ')}]` : '';
-        const activityLine = `${fullName} • LinkedIn${datePart ? ` (${datePart})` : ''}: ${content}${engagement}`;
+        
+        // Format: Name • LinkedIn, date: content [engagement]
+        // This matches the email template structure but in a single line for the UI
+        const activityLine = `${fullName} • LinkedIn${datePart ? `, ${datePart}` : ''}: ${content}${engagement}`;
         recentActivity.add(activityLine.trim());
       }
 
