@@ -780,7 +780,7 @@ const DataEnrichment = () => {
                     <pre className="whitespace-pre">{`{
   "status": "pending",
   "request_id": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "Enrichment request queued successfully...",
+  "message": "Enrichment request queued successfully. Processing will begin via scheduled flows.",
   "credits_charged": 1
 }`}</pre>
                   </div>
