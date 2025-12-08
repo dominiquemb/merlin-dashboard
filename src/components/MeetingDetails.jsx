@@ -26,6 +26,8 @@ const ResearchDetails = ({ meeting }) => {
   const insights = meeting?.insights || [];
   const recentActivity = meeting?.recentActivity || [];
   const companyInfo = meeting?.companyInfo;
+  const readyToSend = meeting?.readyToSend || false;
+  const hasEnrichment = meeting?.briefingSource || meeting?.enrichedSource;
 
   const hasResearch =
     attendeeDetails.length > 0 || insights.length > 0 || recentActivity.length > 0 || !!companyInfo;
@@ -46,9 +48,38 @@ const ResearchDetails = ({ meeting }) => {
     );
   }
 
+  // If meeting has enrichment but is not verified, show notice instead of cards
+  if (hasEnrichment && !readyToSend) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <FiTrendingUp className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-gray-900">Research</h2>
+          </div>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <FiClock className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-semibold text-blue-900 mb-1">
+                  Enrichment Being Delivered Soon
+                </h4>
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  The agent is now onboarding and will be ready to generate your insights in 24 hours.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {attendeeDetails.length > 0 && (
+      {attendeeDetails.length > 0 && readyToSend && (
           <div className="space-y-6">
           {attendeeDetails.map((attendee, index) => {
             // Extract enriched data from briefing source
@@ -255,7 +286,7 @@ const ResearchDetails = ({ meeting }) => {
         </div>
       )}
 
-      {insights.length > 0 && (
+      {insights.length > 0 && readyToSend && (
         <div className="bg-white border border-gray-100 rounded-2xl p-6">
           <div className="flex items-center justify-center gap-2 mb-4">
             <FiTrendingUp className="w-5 h-5 text-primary" />
@@ -272,7 +303,7 @@ const ResearchDetails = ({ meeting }) => {
         </div>
       )}
 
-      {recentActivity.length > 0 && (
+      {recentActivity.length > 0 && readyToSend && (
         <div className="bg-white border border-gray-100 rounded-2xl p-6">
           <div className="flex items-center justify-center gap-2 mb-4">
             <FiClock className="w-5 h-5 text-purple-600" />
@@ -289,7 +320,7 @@ const ResearchDetails = ({ meeting }) => {
         </div>
       )}
 
-      {companyInfo && (() => {
+      {companyInfo && readyToSend && (() => {
         // Extract company data from briefing source if available
         const briefingSource = meeting?.briefingSource || meeting?.briefing_source;
         const briefingCompanies = briefingSource?.companies || {};
