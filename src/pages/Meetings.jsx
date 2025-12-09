@@ -862,7 +862,7 @@ const Meetings = () => {
             {/* Credit Badge */}
             <div className="mb-4">
               <CreditsBadge
-                text="1 credit/meeting"
+                text="2 credit / verified meeting"
                 icon={<FiCreditCard />}
               />
             </div>
