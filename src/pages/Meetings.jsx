@@ -173,7 +173,8 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
 
   const attendeeDetails = [];
   const insights = new Set(meeting.insights || []);
-  const recentActivity = new Set(meeting.recentActivity || []);
+  const recentLinkedInPosts = []; // Store LinkedIn posts separately
+  const recentNews = []; // Store news items separately
   let companyInfo = meeting.companyInfo || null;
 
   Object.entries(briefingCompanies).forEach(([companyName, companyData]) => {
@@ -205,23 +206,28 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
       insights.add(item)
     );
 
-    const recentNews = companyData?.recent_news;
-    if (Array.isArray(recentNews)) {
-      recentNews.forEach((newsItem) => {
+    // Collect recent news items separately (matching email format)
+    const companyRecentNews = companyData?.recent_news;
+    if (Array.isArray(companyRecentNews)) {
+      companyRecentNews.forEach((newsItem) => {
         if (!newsItem) return;
         if (typeof newsItem === 'string') {
           const normalized = normalizeText(newsItem);
-          if (normalized) recentActivity.add(normalized);
+          if (normalized) {
+            recentNews.push({
+              text: normalized,
+              type: 'string'
+            });
+          }
         } else if (typeof newsItem === 'object') {
-          // Use correct field names: title and snippet (matching email template)
+          // Store news item with all fields (matching email template structure)
           const title = normalizeText(newsItem.title || '');
           const snippet = normalizeText(newsItem.snippet || '');
-          // Format like email template: title (link) + snippet + source, date
           const source = normalizeText(newsItem.source || '');
           const date = normalizeText(newsItem.date || '');
           const link = newsItem.link || '';
           
-          // Build formatted news item similar to email template structure
+          // Build formatted news text like email template
           let newsText = '';
           if (title) {
             newsText = title;
@@ -234,12 +240,27 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
             newsText = newsText ? `${newsText} (${sourceDate})` : sourceDate;
           }
           
-          if (newsText) recentActivity.add(newsText);
+          if (newsText) {
+            recentNews.push({
+              text: newsText,
+              title: title || undefined,
+              snippet: snippet || undefined,
+              source: source || undefined,
+              date: date || undefined,
+              link: link || undefined,
+              type: 'object'
+            });
+          }
         }
       });
-    } else if (typeof recentNews === 'string') {
-      const normalized = normalizeText(recentNews);
-      if (normalized) recentActivity.add(normalized);
+    } else if (typeof companyRecentNews === 'string') {
+      const normalized = normalizeText(companyRecentNews);
+      if (normalized) {
+        recentNews.push({
+          text: normalized,
+          type: 'string'
+        });
+      }
     }
 
     ensureArray(companyData?.attendees).forEach((attendee) => {
@@ -304,33 +325,25 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
         insights.add(attendeeSummary);
       }
 
+      // Collect LinkedIn posts separately (matching email format)
       const post = attendee?.social_media?.linkedin_post;
       if (post?.content) {
-        // Format date like email template: only first 10 chars (date part, e.g., "2025-12-04")
+        // Store the full post object (matching email template structure)
         const dateStr = post.date || '';
         const datePart = dateStr ? dateStr.substring(0, 10) : '';
-        
-        // Truncate content to 350 chars like email template
         const fullContent = normalizeText(post.content);
         const content = fullContent.length > 350 
           ? fullContent.substring(0, 350) + '...' 
           : fullContent;
         
-        // Format like email template: content, then "LinkedIn, date" on separate line
-        // For UI display, we'll combine but structure it clearly
-        const engagementParts = [];
-        if (post.engagement?.likes) {
-          engagementParts.push(`${post.engagement.likes} likes`);
-        }
-        if (post.engagement?.comments) {
-          engagementParts.push(`${post.engagement.comments} comments`);
-        }
-        const engagement = engagementParts.length ? ` [${engagementParts.join(', ')}]` : '';
-        
-        // Format: Name • LinkedIn, date: content [engagement]
-        // This matches the email template structure but in a single line for the UI
-        const activityLine = `${fullName} • LinkedIn${datePart ? `, ${datePart}` : ''}: ${content}${engagement}`;
-        recentActivity.add(activityLine.trim());
+        recentLinkedInPosts.push({
+          attendeeName: fullName,
+          content: content,
+          fullContent: fullContent,
+          url: post.url || '',
+          date: datePart,
+          engagement: post.engagement || {}
+        });
       }
 
       // Extract location from enrichedMatch if available
@@ -372,14 +385,16 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
 
   meeting.attendeeDetails = attendeeDetails;
   meeting.insights = Array.from(insights).filter(Boolean);
-  meeting.recentActivity = Array.from(recentActivity).filter(Boolean);
+  meeting.recentLinkedInPost = recentLinkedInPosts.length > 0 ? recentLinkedInPosts[0] : null; // Use first post (matching email format)
+  meeting.recentNews = recentNews; // Store all news items
   meeting.companyInfo = companyInfo;
   meeting.enrichedSource = enrichedSource;
   meeting.briefingSource = briefingSource;
   meeting.hasEnrichment =
     attendeeDetails.length > 0 ||
     meeting.insights.length > 0 ||
-    meeting.recentActivity.length > 0 ||
+    meeting.recentLinkedInPost ||
+    meeting.recentNews.length > 0 ||
     !!companyInfo;
 
   return meeting;
@@ -425,7 +440,8 @@ const transformEventsToMeetings = (events = [], userEmail) => {
         attendees: attendeesList.length > 0 ? attendeesList : ['Just you'],
         attendeeDetails: [],
         insights: [],
-        recentActivity: [],
+        recentLinkedInPost: null,
+        recentNews: [],
         companyInfo: null,
         startDate,
         endDate,

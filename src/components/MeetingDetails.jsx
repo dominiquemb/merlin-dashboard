@@ -24,13 +24,14 @@ const formatDateTime = (date) =>
 const ResearchDetails = ({ meeting }) => {
   const attendeeDetails = meeting?.attendeeDetails || [];
   const insights = meeting?.insights || [];
-  const recentActivity = meeting?.recentActivity || [];
+  const recentLinkedInPost = meeting?.recentLinkedInPost || null;
+  const recentNews = meeting?.recentNews || [];
   const companyInfo = meeting?.companyInfo;
   const readyToSend = meeting?.readyToSend || false;
   const hasEnrichment = meeting?.briefingSource || meeting?.enrichedSource;
 
   const hasResearch =
-    attendeeDetails.length > 0 || insights.length > 0 || recentActivity.length > 0 || !!companyInfo;
+    attendeeDetails.length > 0 || insights.length > 0 || recentLinkedInPost || recentNews.length > 0 || !!companyInfo;
 
   if (!hasResearch) {
     return (
@@ -303,20 +304,52 @@ const ResearchDetails = ({ meeting }) => {
         </div>
       )}
 
-      {recentActivity.length > 0 && readyToSend && (
-        <div className="bg-white border border-gray-100 rounded-2xl p-6">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <FiClock className="w-5 h-5 text-purple-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+      {/* Recent LinkedIn Post Section (matching email format) */}
+      {recentLinkedInPost && readyToSend && (
+        <>
+          <div className="bg-white border-t border-gray-200"></div>
+          <div className="bg-white border border-gray-100 rounded-2xl p-6">
+            <div className="flex flex-col items-center mb-5">
+              <img 
+                src="https://nofuss.co.za/assets/img/merlin/image_li.png" 
+                alt="LinkedIn" 
+                className="w-8 h-8 mb-2"
+              />
+              <h2 className="text-sm font-semibold text-gray-900">Recent LinkedIn Post</h2>
+            </div>
+            <div className="text-base text-gray-700 mb-4">
+              {recentLinkedInPost.content}
+            </div>
+            {recentLinkedInPost.url && (
+              <div className="flex justify-center pt-5">
+                <a
+                  href={recentLinkedInPost.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-6 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-full transition-colors text-xs"
+                  style={{ borderRadius: '50px' }}
+                >
+                  View more on LinkedIn
+                </a>
+              </div>
+            )}
           </div>
-          <ul className="space-y-2 text-sm text-gray-700">
-            {recentActivity.map((activity, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <span className="text-purple-600 mt-1.5">•</span>
-                <span>{activity}</span>
-              </li>
+        </>
+      )}
+
+      {/* Recent News Section (matching email format) */}
+      {recentNews.length > 0 && readyToSend && (
+        <div className="bg-white border border-gray-100 rounded-2xl p-6">
+          <div className="flex items-center justify-center mb-4">
+            <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Recent News</h2>
+          </div>
+          <div className="text-sm text-gray-700">
+            {recentNews.map((newsItem, index) => (
+              <div key={index} className="text-gray-700 mb-2 last:mb-0">
+                {newsItem.text}
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
 
