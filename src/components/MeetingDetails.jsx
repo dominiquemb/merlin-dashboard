@@ -310,11 +310,7 @@ const ResearchDetails = ({ meeting }) => {
           <div className="bg-white border-t border-gray-200"></div>
           <div className="bg-white border border-gray-100 rounded-2xl p-6">
             <div className="flex flex-col items-center mb-5">
-              <img 
-                src="https://nofuss.co.za/assets/img/merlin/image_li.png" 
-                alt="LinkedIn" 
-                className="w-8 h-8 mb-2"
-              />
+              <FiLinkedin className="w-8 h-8 mb-2 text-blue-600" />
               <h2 className="text-sm font-semibold text-gray-900">Recent LinkedIn Post</h2>
             </div>
             <div className="text-base text-gray-700 mb-4">
