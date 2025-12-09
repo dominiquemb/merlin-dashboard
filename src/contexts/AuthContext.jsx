@@ -47,6 +47,8 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       
+      console.log('Auth state changed:', event, session ? 'has session' : 'no session');
+      
       setUser(session?.user ?? null);
       setLoading(false);
       
@@ -62,6 +64,12 @@ export const AuthProvider = ({ children }) => {
             window.history.replaceState(null, '', path + search);
           }
         }, 100);
+      }
+      
+      // Handle sign out
+      if (event === 'SIGNED_OUT') {
+        console.log('User signed out, clearing user state');
+        setUser(null);
       }
     });
 
@@ -102,11 +110,25 @@ export const AuthProvider = ({ children }) => {
   // Sign out
   const signOut = async () => {
     try {
+      // Try to sign out from Supabase
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      // Even if there's an error, clear the user state locally
+      // This handles cases where the session is already expired
+      setUser(null);
+      
+      if (error) {
+        // Log the error but don't throw - we'll still clear local state
+        console.warn('Supabase signOut error (but clearing local state anyway):', error.message);
+        return { error: error.message };
+      }
+      
       return { error: null };
     } catch (error) {
-      return { error: error.message };
+      // Clear user state even on exception
+      setUser(null);
+      console.warn('SignOut exception (but clearing local state anyway):', error);
+      return { error: error.message || 'Unknown error' };
     }
   };
 

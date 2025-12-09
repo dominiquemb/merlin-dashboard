@@ -57,8 +57,54 @@ const Navbar = () => {
   }, [user]);
 
   const handleLogout = async () => {
-    await signOut();
-    navigate("/login");
+    console.log('Logout button clicked');
+    try {
+      console.log('Calling signOut...');
+      const result = await signOut();
+      console.log('signOut result:', result);
+      
+      // Even if signOut fails, clear local storage and navigate
+      // This handles cases where the session is already expired or missing
+      if (result?.error) {
+        console.warn('SignOut returned error, but clearing local storage anyway:', result.error);
+      }
+      
+      // Clear any Supabase-related storage manually
+      try {
+        // Clear all Supabase auth tokens from localStorage
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.includes('supabase') || key.includes('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+        console.log('Cleared Supabase storage');
+      } catch (storageError) {
+        console.warn('Error clearing storage:', storageError);
+      }
+      
+      // Close the user menu
+      setIsUserMenuOpen(false);
+      // Navigate to login
+      console.log('Navigating to login...');
+      navigate("/login");
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Clear storage even on error
+      try {
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.includes('supabase') || key.includes('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (storageError) {
+        console.warn('Error clearing storage:', storageError);
+      }
+      // Still navigate to login even if there's an error
+      setIsUserMenuOpen(false);
+      navigate("/login");
+    }
   };
 
   const getUserInitials = () => {
@@ -247,7 +293,11 @@ const Navbar = () => {
                 </Link>
                 <div className="border-t border-neutral-300 my-1"></div>
                 <button
-                  onClick={handleLogout}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleLogout();
+                  }}
                   className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
                 >
                   <FiLogOut className="w-4 h-4" />
