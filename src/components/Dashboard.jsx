@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { FiCheckCircle, FiEye, FiClock, FiCalendar, FiUsers, FiMapPin, FiX, FiSend, FiZap, FiVideo, FiTrendingUp, FiArrowRight, FiAward, FiInfo, FiLock, FiTarget } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchCalendarEvents } from '../lib/calendarApi';
+import { fetchCalendarEvents, getCalendarSyncStatus } from '../lib/calendarApi';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -23,9 +23,40 @@ const Dashboard = () => {
   const [liveAgentMessage, setLiveAgentMessage] = useState('Mapping stakeholder relationships...');
   const messageIndexRef = useRef(0);
 
+  const hasCheckedCalendarRef = useRef(false);
+
   useEffect(() => {
-    loadTodaysMeetings();
-  }, []);
+    // Only check calendar connection once, when user is available
+    if (!user?.email || hasCheckedCalendarRef.current) {
+      // If user exists and calendar is already checked, just load meetings
+      if (user?.email && hasCheckedCalendarRef.current) {
+        loadTodaysMeetings();
+      }
+      return;
+    }
+    
+    hasCheckedCalendarRef.current = true;
+    
+    const checkCalendarConnection = async () => {
+      try {
+        const status = await getCalendarSyncStatus();
+        
+        // If no events found, redirect to connect calendar page
+        if (status.success && status.data && status.data.status === 'no_events' && status.data.total_events === 0) {
+          navigate('/connect-calendar');
+          return;
+        }
+        // If calendar is connected, load meetings
+        loadTodaysMeetings();
+      } catch (error) {
+        // If error checking status, assume calendar not connected
+        console.log('Error checking calendar status, redirecting to connect:', error);
+        navigate('/connect-calendar');
+      }
+    };
+
+    checkCalendarConnection();
+  }, [user?.email]); // Only depend on user email, not the whole user object
 
   // Live Agent Activity - Rotating contextual messages (UI theatre)
   useEffect(() => {

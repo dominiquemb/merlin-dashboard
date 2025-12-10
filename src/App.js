@@ -18,6 +18,8 @@ import Services from "./pages/Services";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
 import SharedBrief from "./pages/SharedBrief";
+import ConnectCalendar from "./pages/ConnectCalendar";
+import Onboarding from "./pages/Onboarding";
 
 function App() {
   console.log('[App] Rendering, current path:', window.location.pathname, 'hash:', window.location.hash);
@@ -93,6 +95,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <Billing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/connect-calendar"
+            element={
+              <ProtectedRoute>
+                <ConnectCalendar />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <Onboarding />
               </ProtectedRoute>
             }
           />
