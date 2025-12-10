@@ -952,7 +952,7 @@ const Meetings = () => {
                   ) : (
                     <>
                       <FiRefreshCw className="w-4 h-4" />
-                      <span>Sync Calendar DEBUG</span>
+                      <span>Sync Calendar</span>
                     </>
                   )}
                 </button>
