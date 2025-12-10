@@ -212,24 +212,42 @@ const isTokenExpired = (token) => {
 };
 
 /**
- * Get auth token from localStorage (settings API JWT token)
+ * Get auth token from Supabase session
  */
 const getAuthToken = async () => {
-  // Get JWT token from localStorage (from settings API login)
-  const jwtToken = localStorage.getItem('settings_jwt_token');
-  
-  if (jwtToken && !isTokenExpired(jwtToken)) {
-    return jwtToken;
+  try {
+    // First try to get the current session
+    let { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Error getting Supabase session:', sessionError);
+      return null;
+    }
+    
+    // If no session, try to refresh it
+    if (!session) {
+      console.log('No session found, attempting to refresh...');
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('Error refreshing Supabase session:', refreshError);
+        return null;
+      }
+      
+      session = refreshedSession;
+    }
+    
+    if (!session || !session.access_token) {
+      console.error('No valid session or access token found');
+      return null;
+    }
+    
+    console.log('Successfully retrieved Supabase access token');
+    return session.access_token;
+  } catch (error) {
+    console.error('Failed to get Supabase auth token:', error);
+    return null;
   }
-  
-  // Token expired or doesn't exist - return null to trigger re-login
-  if (jwtToken && isTokenExpired(jwtToken)) {
-    console.warn('Settings API JWT token expired, please login again');
-    localStorage.removeItem('settings_jwt_token');
-    localStorage.removeItem('settings_jwt_expiry');
-  }
-  
-  return null;
 };
 
 /**
@@ -239,13 +257,18 @@ export const getVendors = async () => {
   try {
     const token = await getAuthToken();
     if (!token) {
+      console.error('No auth token available for vendors API');
       return {
         error: true,
         data: null,
-        message: 'Not authenticated. Please login to the settings API first.',
+        message: 'Not authenticated. Please login first.',
         requiresLogin: true
       };
     }
+
+    console.log('Fetching vendors from:', `${API_URL}/v1/common/vendors`);
+    console.log('Token length:', token.length);
+    console.log('Token preview:', token.substring(0, 20) + '...');
 
     const response = await fetch(`${API_URL}/v1/common/vendors`, {
       method: 'GET',
@@ -255,17 +278,17 @@ export const getVendors = async () => {
       },
     });
 
+    console.log('Vendors API response status:', response.status);
+    console.log('Vendors API response ok:', response.ok);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      // If token is invalid, clear it
-      if (response.status === 401) {
-        localStorage.removeItem('settings_jwt_token');
-        localStorage.removeItem('settings_jwt_expiry');
-      }
+      const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+      console.error('Vendors API error response:', errorData);
       throw new Error(errorData.message || 'Failed to fetch vendors');
     }
 
     const data = await response.json();
+    console.log('Vendors API success, data:', data);
     return {
       error: false,
       data: data.data || data,
@@ -367,7 +390,7 @@ export const createSetting = async (settingData) => {
       return {
         error: true,
         data: null,
-        message: 'Not authenticated. Please login to the settings API first.',
+        message: 'Not authenticated. Please login first.',
         requiresLogin: true
       };
     }
@@ -383,11 +406,6 @@ export const createSetting = async (settingData) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      // If token is invalid, clear it
-      if (response.status === 401) {
-        localStorage.removeItem('settings_jwt_token');
-        localStorage.removeItem('settings_jwt_expiry');
-      }
       throw new Error(errorData.message || 'Failed to create setting');
     }
 

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FiChevronDown, FiChevronUp, FiMail, FiMessageSquare, FiBriefcase, FiTarget, FiZap, FiCreditCard } from 'react-icons/fi';
+import { FiChevronDown, FiChevronUp, FiMail, FiMessageSquare, FiBriefcase, FiTarget, FiZap, FiCreditCard, FiX, FiSend } from 'react-icons/fi';
 import CreditsBadge from './CreditsBadge';
 import AddSettingsModal from './AddSettingsModal';
 import { createSetting, exchangeOAuthCode } from '../lib/settingsApi';
+import { useAuth } from '../contexts/AuthContext';
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -21,6 +22,7 @@ const getAuthToken = async () => {
 };
 
 const ICPSettings = () => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -35,6 +37,10 @@ const ICPSettings = () => {
   const [yearsFounded, setYearsFounded] = useState([]);
   const [customQuestion, setCustomQuestion] = useState('');
   const [isSlackModalOpen, setIsSlackModalOpen] = useState(false);
+  const [showCrmModal, setShowCrmModal] = useState(false);
+  const [crmEmailMessage, setCrmEmailMessage] = useState('');
+  const [isSendingCrmEmail, setIsSendingCrmEmail] = useState(false);
+  const [crmEmailSent, setCrmEmailSent] = useState(false);
 
   // Handle OAuth return when component mounts
   useEffect(() => {
@@ -411,25 +417,24 @@ const ICPSettings = () => {
             <button
               type="button"
               onClick={() => setIsSlackModalOpen(true)}
-              disabled
               className={`p-4 rounded-lg border-2 transition ${
                 deliveryChannels.slack
-                  ? 'border-gray-300 bg-gray-100'
-                  : 'border-gray-200 bg-gray-50'
-              } opacity-50 cursor-not-allowed`}
+                  ? 'border-primary bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
             >
-              <FiMessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-400" />
-              <div className="text-sm font-medium text-gray-500">Slack</div>
+              <FiMessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+              <div className="text-sm font-medium text-gray-900">Slack</div>
             </button>
 
             <button
-              onClick={() => setDeliveryChannels(prev => ({ ...prev, crm: !prev.crm }))}
-              disabled
+              type="button"
+              onClick={() => setShowCrmModal(true)}
               className={`p-4 rounded-lg border-2 transition ${
                 deliveryChannels.crm
-                  ? 'border-gray-300 bg-gray-100'
-                  : 'border-gray-200 bg-gray-50'
-              } opacity-50 cursor-not-allowed`}
+                  ? 'border-primary bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
             >
               <FiBriefcase className="w-6 h-6 mx-auto mb-2 text-gray-400" />
               <div className="text-sm font-medium text-gray-500">CRM Integration</div>
@@ -658,6 +663,149 @@ const ICPSettings = () => {
           hook_url: ''
         }}
       />
+
+      {/* CRM Contact Modal */}
+      {showCrmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative">
+            {/* Close button */}
+            <button
+              onClick={() => setShowCrmModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+            >
+              <FiX className="w-6 h-6" />
+            </button>
+
+            {crmEmailSent ? (
+              /* Success State */
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Message Sent!</h3>
+                <p className="text-gray-600">
+                  We'll get back to you shortly about CRM integration.
+                </p>
+              </div>
+            ) : (
+              /* Email Form */
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setIsSendingCrmEmail(true);
+                try {
+                  const formData = new FormData();
+                  formData.append('name', user?.user_metadata?.full_name || user?.email || 'User');
+                  formData.append('email', user?.email || '');
+                  formData.append('message', crmEmailMessage);
+                  formData.append('_subject', 'CRM Integration Inquiry');
+                  formData.append('_captcha', 'false');
+
+                  const response = await fetch('https://formsubmit.co/insights@usemerlin.io', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                      'Accept': 'application/json'
+                    }
+                  });
+
+                  if (response.ok) {
+                    setCrmEmailSent(true);
+                    setTimeout(() => {
+                      setShowCrmModal(false);
+                      setCrmEmailMessage('');
+                    }, 2000);
+                  } else {
+                    throw new Error('Failed to send email');
+                  }
+                } catch (error) {
+                  console.error('❌ Error sending CRM inquiry email:', error);
+                  alert('Failed to send email. Please try again.');
+                } finally {
+                  setIsSendingCrmEmail(false);
+                }
+              }}>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Contact Us</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  Send us a message about <span className="font-semibold">CRM Integration</span>
+                </p>
+
+                <div className="space-y-4">
+                  {/* From (user's email) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      From
+                    </label>
+                    <input
+                      type="email"
+                      value={user?.email || ''}
+                      disabled
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                    />
+                  </div>
+
+                  {/* To (fixed) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      To
+                    </label>
+                    <input
+                      type="email"
+                      value="insights@usemerlin.io"
+                      disabled
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600"
+                    />
+                  </div>
+
+                  {/* Message */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Message
+                    </label>
+                    <textarea
+                      value={crmEmailMessage}
+                      onChange={(e) => setCrmEmailMessage(e.target.value)}
+                      rows={5}
+                      required
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
+                      placeholder="Your message..."
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCrmModal(false)}
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSendingCrmEmail || !crmEmailMessage.trim()}
+                      className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isSendingCrmEmail ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Sending...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FiSend className="w-4 h-4" />
+                          <span>Send Message</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

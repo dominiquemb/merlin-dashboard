@@ -374,15 +374,14 @@ const Onboarding = () => {
                 <button
                   type="button"
                   onClick={() => setIsSlackModalOpen(true)}
-                  disabled
                   className={`p-4 rounded-lg border-2 transition ${
                     deliveryChannels.slack
-                      ? 'border-gray-300 bg-gray-100'
-                      : 'border-gray-200 bg-gray-50'
-                  } opacity-50 cursor-not-allowed`}
+                      ? 'border-primary bg-blue-50'
+                      : 'border-gray-200 bg-white hover:border-gray-300'
+                  }`}
                 >
-                  <FiMessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                  <div className="text-sm font-medium text-gray-500">Slack</div>
+                  <FiMessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                  <div className="text-sm font-medium text-gray-900">Slack</div>
                 </button>
 
                 <button
