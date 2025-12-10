@@ -45,6 +45,37 @@ const Onboarding = () => {
   const [isSendingCrmEmail, setIsSendingCrmEmail] = useState(false);
   const [crmEmailSent, setCrmEmailSent] = useState(false);
 
+  // Prevent navigation away from onboarding until it's complete
+  useEffect(() => {
+    const checkOnboardingComplete = async () => {
+      try {
+        const token = await getAuthToken();
+        if (!token) return;
+        
+        const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+        const response = await fetch(`${apiUrl}/icp/status`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // If onboarding is already complete, allow navigation to dashboard
+          if (data.has_icp_criteria && data.icp_criteria) {
+            console.log('Onboarding already complete, user can navigate away');
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('Error checking onboarding status:', error);
+      }
+    };
+    
+    checkOnboardingComplete();
+  }, []);
+
   // Handle OAuth return when component mounts
   useEffect(() => {
     const handleOAuthReturn = async () => {
@@ -55,6 +86,16 @@ const Onboarding = () => {
       const oauthReturn = urlParams.get('oauth_return');
       const code = urlParams.get('code');
       const error = urlParams.get('error');
+      const calendarConnected = urlParams.get('calendar_connected');
+      
+      // If user just connected their calendar, show a success message
+      if (calendarConnected === 'true') {
+        console.log('User just connected calendar, showing success message');
+        setSaveMessage('✅ Calendar connected successfully! Please complete your onboarding below.');
+        setTimeout(() => setSaveMessage(''), 5000);
+        // Clean up URL parameter but stay on onboarding page
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
       
       // Check if user returned from OAuth (they navigated back manually)
       const oauthInProgress = localStorage.getItem('settings_oauth_in_progress');
@@ -302,10 +343,75 @@ const Onboarding = () => {
     loadICPSettings();
   }, []);
 
-  // Save ICP settings to backend - but for onboarding, redirect to dashboard instead
+  // Save ICP settings to backend and then redirect to dashboard
   const handleSaveSettings = async () => {
-    // For onboarding, just redirect to dashboard
-    navigate('/dashboard');
+    setIsSaving(true);
+    setSaveMessage('');
+    
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setSaveMessage('❌ Not authenticated. Please log in.');
+        setIsSaving(false);
+        return;
+      }
+
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+
+      // Map frontend values to backend format
+      const employeeSizesMap = {
+        '1-10': '1-10',
+        '11-50': '11-50',
+        '51-200': '51-100',
+        '201-500': '101-500',
+        '501-1000': '500+',
+        '1001-5000': '500+',
+        '5001+': '500+',
+      };
+
+      const yearsFoundedMap = {
+        '0-2': 'Last 12 months',
+        '3-5': '1-3 years',
+        '6-10': 'More than 3 years',
+        '11-20': 'More than 3 years',
+        '20+': 'More than 3 years',
+      };
+
+      const requestBody = {
+        enabled: icpAnalysisEnabled,
+        employee_sizes: employeeRanges.map(range => employeeSizesMap[range] || range),
+        founded_years: yearsFounded.map(year => yearsFoundedMap[year] || year),
+      };
+
+      console.log('Saving ICP criteria for onboarding:', requestBody);
+
+      const response = await fetch(`${apiUrl}/icp/criteria`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.success !== false) {
+        setSaveMessage('✅ Onboarding completed! Redirecting to dashboard...');
+        // Wait a moment to show success message, then redirect
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 1500);
+      } else {
+        setSaveMessage(`❌ ${result.message || 'Failed to save settings. Please try again.'}`);
+        setIsSaving(false);
+      }
+      
+    } catch (error) {
+      console.error('Error saving ICP settings:', error);
+      setSaveMessage('❌ Failed to save settings. Please try again.');
+      setIsSaving(false);
+    }
   };
 
   const handleAddSettingsSubmit = async (formData) => {

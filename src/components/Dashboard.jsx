@@ -27,6 +27,7 @@ const Dashboard = () => {
   const hasCheckedOnboardingRef = useRef(false);
 
   // Check if user has completed onboarding (has ICP criteria set)
+  // Also check for calendar_connected parameter from OAuth redirect
   useEffect(() => {
     if (!user?.email || hasCheckedOnboardingRef.current) return;
     
@@ -34,6 +35,18 @@ const Dashboard = () => {
     
     const checkOnboardingStatus = async () => {
       try {
+        // Check if user just connected their calendar (from OAuth redirect)
+        const urlParams = new URLSearchParams(window.location.search);
+        const calendarConnected = urlParams.get('calendar_connected');
+        
+        if (calendarConnected === 'true') {
+          console.log('User just connected calendar, redirecting to onboarding');
+          // Clean up URL parameter
+          window.history.replaceState({}, document.title, window.location.pathname);
+          navigate('/onboarding');
+          return;
+        }
+        
         const token = await (async () => {
           const { createClient } = await import('@supabase/supabase-js');
           const supabase = createClient(
@@ -56,14 +69,10 @@ const Dashboard = () => {
         
         if (response.ok) {
           const data = await response.json();
-          // If user has calendar events but no ICP criteria, they need to complete onboarding
-          // Check if they have calendar events first
-          const calendarStatus = await getCalendarSyncStatus();
-          const hasEvents = calendarStatus.success && calendarStatus.data && 
-                           calendarStatus.data.total_events > 0;
           
-          if (hasEvents && (!data.has_icp_criteria || !data.icp_criteria)) {
-            console.log('User has calendar events but no ICP criteria, redirecting to onboarding');
+          // Always redirect to onboarding if user hasn't completed it (no ICP criteria)
+          if (!data.has_icp_criteria || !data.icp_criteria) {
+            console.log('User has not completed onboarding (no ICP criteria), redirecting to onboarding');
             navigate('/onboarding');
             return;
           }
