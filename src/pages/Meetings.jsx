@@ -556,25 +556,50 @@ const Meetings = () => {
   }, [meetings]);
 
   const loadMeetings = useCallback(async () => {
+    const timestamp = new Date().toISOString();
+    console.log('📥 [Meetings] ========== LOAD MEETINGS START ==========');
+    console.log('📥 [Meetings] User:', { email: user?.email, id: user?.id, timestamp });
+    
     if (!user?.email) {
+      console.warn('📥 [Meetings] No user email, clearing meetings');
       setMeetings([]);
       setMeetingsError(null);
       return;
     }
 
+    console.log('📥 [Meetings] Setting loading state to true');
     setIsLoadingMeetings(true);
     setMeetingsError(null);
 
     try {
+      console.log('📥 [Meetings] Calling fetchCalendarEvents...');
       const response = await fetchCalendarEvents({ limit: 100, daysAhead: 30 });
+      console.log('📥 [Meetings] fetchCalendarEvents response:', {
+        success: response.success,
+        hasData: !!response.data,
+        hasEvents: !!response.data?.events,
+        eventsCount: response.data?.events?.length || 0,
+        error: response.error,
+      });
+      
       if (!response.success) {
+        console.error('📥 [Meetings] fetchCalendarEvents failed:', response.error);
         setMeetings([]);
         setMeetingsError(response.error || 'Unable to load meetings');
         return;
       }
 
       const events = response.data?.events || [];
-      console.log('📥 [Meetings] Received events from API:', events.length);
+      console.log('📥 [Meetings] Received events from API:', {
+        count: events.length,
+        eventIds: events.slice(0, 5).map(e => e?.event_id),
+        sampleEvent: events[0] ? {
+          event_id: events[0].event_id,
+          event: events[0].event,
+          start: events[0].start,
+          attendees: events[0].attendees,
+        } : null,
+      });
       
       // Debug: Check for the specific event
       const targetEventId = '7po140m877gb54ifk53q0tt2hf';

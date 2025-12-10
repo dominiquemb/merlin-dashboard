@@ -24,6 +24,58 @@ const Dashboard = () => {
   const messageIndexRef = useRef(0);
 
   const hasCheckedCalendarRef = useRef(false);
+  const hasCheckedOnboardingRef = useRef(false);
+
+  // Check if user has completed onboarding (has ICP criteria set)
+  useEffect(() => {
+    if (!user?.email || hasCheckedOnboardingRef.current) return;
+    
+    hasCheckedOnboardingRef.current = true;
+    
+    const checkOnboardingStatus = async () => {
+      try {
+        const token = await (async () => {
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabase = createClient(
+            process.env.REACT_APP_SUPABASE_URL,
+            process.env.REACT_APP_SUPABASE_ANON_KEY
+          );
+          const { data: { session } } = await supabase.auth.getSession();
+          return session?.access_token || null;
+        })();
+        
+        if (!token) return;
+        
+        const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+        const response = await fetch(`${apiUrl}/icp/status`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // If user has calendar events but no ICP criteria, they need to complete onboarding
+          // Check if they have calendar events first
+          const calendarStatus = await getCalendarSyncStatus();
+          const hasEvents = calendarStatus.success && calendarStatus.data && 
+                           calendarStatus.data.total_events > 0;
+          
+          if (hasEvents && (!data.has_icp_criteria || !data.icp_criteria)) {
+            console.log('User has calendar events but no ICP criteria, redirecting to onboarding');
+            navigate('/onboarding');
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('Error checking onboarding status:', error);
+        // Don't block user if check fails
+      }
+    };
+    
+    checkOnboardingStatus();
+  }, [user?.email, navigate]);
 
   useEffect(() => {
     // Only check calendar connection once, when user is available

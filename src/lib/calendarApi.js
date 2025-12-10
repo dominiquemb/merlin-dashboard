@@ -271,10 +271,15 @@ export const checkApiHealth = async () => {
  * @returns {Promise<Object>} Calendar events result
  */
 export const fetchCalendarEvents = async ({ limit = 50, daysAhead = 30 } = {}) => {
-  console.log('📅 [Calendar API] Fetch events', { limit, daysAhead });
+  const timestamp = new Date().toISOString();
+  console.log('📅 [Calendar API] ========== FETCH EVENTS START ==========');
+  console.log('📅 [Calendar API] Fetch events request:', { limit, daysAhead, timestamp, apiUrl: API_URL });
 
   try {
+    console.log('📅 [Calendar API] Getting auth token...');
     const token = await getAuthToken();
+    console.log('📅 [Calendar API] Token obtained:', token ? `Token exists (length: ${token.length}, first 20 chars: ${token.substring(0, 20)}...)` : 'null');
+    
     if (!token) {
       console.error('❌ [Calendar API] No authentication token found for events fetch');
       return {
@@ -286,8 +291,18 @@ export const fetchCalendarEvents = async ({ limit = 50, daysAhead = 30 } = {}) =
     const url = new URL(`${API_URL}/calendar/events`);
     url.searchParams.set('limit', limit);
     url.searchParams.set('days_ahead', daysAhead);
+    
+    const fullUrl = url.toString();
+    console.log('📅 [Calendar API] Request URL:', fullUrl);
+    console.log('📅 [Calendar API] Request headers:', {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token.substring(0, 20)}...`,
+    });
 
-    const response = await fetch(url.toString(), {
+    const requestStartTime = Date.now();
+    console.log('📅 [Calendar API] Sending fetch request...');
+    
+    const response = await fetch(fullUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -295,14 +310,39 @@ export const fetchCalendarEvents = async ({ limit = 50, daysAhead = 30 } = {}) =
       },
     });
 
+    const requestDuration = Date.now() - requestStartTime;
+    console.log('📅 [Calendar API] Response received:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      duration: `${requestDuration}ms`,
+      headers: Object.fromEntries(response.headers.entries()),
+    });
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('❌ [Calendar API] Fetch events failed:', { status: response.status, errorData });
+      console.error('❌ [Calendar API] Fetch events failed:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        errorData,
+        url: fullUrl,
+      });
       throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
     }
 
+    console.log('📅 [Calendar API] Parsing response JSON...');
     const data = await response.json();
-    console.log('✅ [Calendar API] Events received:', data);
+    console.log('✅ [Calendar API] Events received:', {
+      eventsCount: data?.events?.length || 0,
+      hasEvents: Array.isArray(data?.events),
+      dataKeys: Object.keys(data || {}),
+      sampleEvent: data?.events?.[0] ? {
+        event_id: data.events[0].event_id,
+        event: data.events[0].event,
+        start: data.events[0].start,
+        email: data.events[0].email,
+      } : null,
+    });
 
     return {
       success: true,
@@ -311,7 +351,9 @@ export const fetchCalendarEvents = async ({ limit = 50, daysAhead = 30 } = {}) =
   } catch (error) {
     console.error('❌ [Calendar API] Error fetching events:', {
       message: error.message,
+      stack: error.stack,
       error,
+      timestamp,
     });
 
     return {
