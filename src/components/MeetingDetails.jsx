@@ -16,10 +16,37 @@ import {
   FiFileText,
   FiGlobe,
   FiSettings,
+  FiTarget,
 } from 'react-icons/fi';
 
 const formatDateTime = (date) =>
   date ? date.toLocaleString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Not available';
+
+// Helper function to convert URLs in text to clickable links
+const linkifyText = (text) => {
+  if (typeof text !== 'string') return text;
+  
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      const url = part.startsWith('http') ? part : `https://${part}`;
+      return (
+        <a
+          key={index}
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-600 hover:underline"
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
 
 const ResearchDetails = ({ meeting }) => {
   const attendeeDetails = meeting?.attendeeDetails || [];
@@ -95,6 +122,7 @@ const ResearchDetails = ({ meeting }) => {
             let previousPositions = [];
             let tenureMonths = null;
             let currentRoleStartDate = null;
+            let briefingMatch = null; // Store the matched attendee from briefing_source
             
             Object.entries(briefingCompanies).forEach(([companyName, companyData]) => {
               const enrichedAttendees = enrichedCompanies[companyName]?.attendees || [];
@@ -114,6 +142,7 @@ const ResearchDetails = ({ meeting }) => {
               });
               
               if (match) {
+                briefingMatch = match; // Store the match for use in rendering
                 const enrichedMatch = enrichedAttendees.find((ea) => {
                   const eaEmail = (ea?.email_address || '').toLowerCase();
                   const matchEmail = (match?.profile?.email || match?.email || '').toLowerCase();
@@ -130,9 +159,27 @@ const ResearchDetails = ({ meeting }) => {
               }
             });
             
-            // Calculate tenure string
+            // Calculate tenure string - check briefing_source first (matching email template)
             let tenureStr = null;
-            if (tenureMonths) {
+            // First try to get from briefing_source (person.profile.tenure_months)
+            const briefingTenureMonths = briefingMatch?.profile?.tenure_months;
+            if (briefingTenureMonths) {
+              if (typeof briefingTenureMonths === 'number' && briefingTenureMonths > 0) {
+                const years = Math.floor(briefingTenureMonths / 12);
+                const months = briefingTenureMonths % 12;
+                if (years > 0 && months > 0) {
+                  tenureStr = `${years} year${years > 1 ? 's' : ''}, ${months} month${months > 1 ? 's' : ''}`;
+                } else if (years > 0) {
+                  tenureStr = `${years} year${years > 1 ? 's' : ''}`;
+                } else if (months > 0) {
+                  tenureStr = `${months} month${months > 1 ? 's' : ''}`;
+                }
+              } else if (typeof briefingTenureMonths === 'string') {
+                tenureStr = briefingTenureMonths;
+              }
+            }
+            // Fallback to enriched_source
+            if (!tenureStr && tenureMonths) {
               const years = Math.floor(tenureMonths / 12);
               const months = tenureMonths % 12;
               if (years > 0 && months > 0) {
@@ -144,11 +191,27 @@ const ResearchDetails = ({ meeting }) => {
               }
             }
             
-            // Get previous role
-            const previousRole = previousPositions.length > 0 ? previousPositions[0] : null;
-            const previousRoleStr = previousRole 
-              ? `${previousRole.title || 'Previous Role'}${previousRole.company_name ? ` - ${previousRole.company_name}` : ''}`
-              : null;
+            // Get previous role - check briefing_source first (matching email template)
+            let previousRoleStr = null;
+            // First try from briefing_source (person.career.previous_positions[0])
+            const briefingPreviousPositions = briefingMatch?.career?.previous_positions || [];
+            if (briefingPreviousPositions.length > 0) {
+              const briefingPreviousRole = briefingPreviousPositions[0];
+              if (briefingPreviousRole.title) {
+                previousRoleStr = briefingPreviousRole.title;
+                const companyName = briefingPreviousRole.company_name || briefingPreviousRole.company?.name || null;
+                if (companyName) {
+                  previousRoleStr += ` - ${companyName}`;
+                }
+              }
+            }
+            // Fallback to enriched_source
+            if (!previousRoleStr) {
+              const previousRole = previousPositions.length > 0 ? previousPositions[0] : null;
+              if (previousRole) {
+                previousRoleStr = `${previousRole.title || 'Previous Role'}${previousRole.company_name ? ` - ${previousRole.company_name}` : ''}`;
+              }
+            }
             
             // Build biography from available data
             const biographyParts = [];
@@ -204,11 +267,11 @@ const ResearchDetails = ({ meeting }) => {
                 <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">{attendee.name}</h3>
                 
                 {/* Key Information Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-3 gap-4 mb-6">
                   {attendee.company && (
                     <div className="flex flex-col items-center text-center">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <FiBriefcase className="w-5 h-5 text-gray-900" />
+                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/building_1_fill.png" alt="Company" className="w-5 h-5" />
                       </div>
                       <p className="text-xs text-gray-900 mb-0.5">Company</p>
                         <a 
@@ -225,7 +288,7 @@ const ResearchDetails = ({ meeting }) => {
                   {attendee.title && (
                     <div className="flex flex-col items-center text-center">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <FiBriefcase className="w-5 h-5 text-gray-900" />
+                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/briefcase_fill.png" alt="Job Title" className="w-5 h-5" />
                       </div>
                       <p className="text-xs text-gray-900 mb-0.5">Job Title</p>
                       <p className="text-sm font-medium text-gray-500">{attendee.title}</p>
@@ -235,74 +298,189 @@ const ResearchDetails = ({ meeting }) => {
                   {tenureStr && (
                     <div className="flex flex-col items-center text-center">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <FiCalendar className="w-5 h-5 text-gray-900" />
+                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/calendar_fill.png" alt="Tenure" className="w-5 h-5" />
                       </div>
                       <p className="text-xs text-gray-900 mb-0.5">Tenure</p>
                       <p className="text-sm font-medium text-gray-500">{tenureStr}</p>
                     </div>
                   )}
                   
-                  {attendee.location && (
+                  {(attendee.location || briefingMatch?.profile?.location) && (
                     <div className="flex flex-col items-center text-center">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <FiMapPin className="w-5 h-5 text-gray-900" />
+                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/briefcase_fill.png" alt="Location" className="w-5 h-5" />
                       </div>
                       <p className="text-xs text-gray-900 mb-0.5">Location</p>
-                      <p className="text-sm font-medium text-gray-500">{attendee.location}</p>
+                      <p className="text-sm font-medium text-gray-500">{attendee.location || briefingMatch?.profile?.location || ''}</p>
                     </div>
                   )}
                   
                   {previousRoleStr && (
                     <div className="flex flex-col items-center text-center">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <FiBriefcase className="w-5 h-5 text-gray-900" />
+                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/briefcase_fill.png" alt="Previous Role" className="w-5 h-5" />
                       </div>
                       <p className="text-xs text-gray-900 mb-0.5">Previous Role</p>
                       <p className="text-sm font-medium text-gray-500">{previousRoleStr}</p>
                   </div>
                   )}
                   
-                  {/* Decision-making Authority - placeholder if we have data */}
-                  {enrichedAttendee?.decision_making_authority && (
+                  {/* Decision-making Authority - check briefing_source first (matching email template) */}
+                  {(briefingMatch?.profile?.decision_authority || enrichedAttendee?.decision_making_authority) && (
                     <div className="flex flex-col items-center text-center">
                       <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <FiInfo className="w-5 h-5 text-gray-900" />
+                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/scales.png" alt="Decision-making Authority" className="w-5 h-5" />
                       </div>
                       <p className="text-xs text-gray-900 mb-0.5">Decision-making Authority</p>
-                      <p className="text-sm font-medium text-gray-500">{enrichedAttendee.decision_making_authority}</p>
+                      <p className="text-sm font-medium text-gray-500">{briefingMatch?.profile?.decision_authority || enrichedAttendee?.decision_making_authority || ''}</p>
                     </div>
                   )}
                 </div>
                 
-                {/* Detailed Biography */}
-                {biography && (
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Detailed Biography</h4>
-                    <p className="text-sm text-gray-700 leading-relaxed">{biography}</p>
+                {/* Insights (biography removed per user request) */}
+                {insights.length > 0 && readyToSend && (
+                  <div className="mb-6">
+                    <div className="space-y-2 text-sm text-gray-700">
+                      {insights.map((insight, idx) => (
+                        <div key={idx}>
+                          <span>{insight}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
+
               </div>
             );
           })}
         </div>
       )}
 
-      {insights.length > 0 && readyToSend && (
-        <div className="bg-white border border-gray-100 rounded-2xl p-6">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <FiTrendingUp className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold text-gray-900">Key Insights</h2>
+      {/* Background Section - Separate Card (matching email template) */}
+      {attendeeDetails.length > 0 && readyToSend && attendeeDetails.map((attendee, index) => {
+        const briefingSource = meeting?.briefingSource || meeting?.briefing_source;
+        const briefingCompanies = briefingSource?.companies || {};
+        
+        // Find matching attendee from briefing_source
+        let briefingMatch = null;
+        Object.entries(briefingCompanies).forEach(([companyName, companyData]) => {
+          const briefingAttendees = companyData?.attendees || [];
+          const match = briefingAttendees.find((a) => {
+            const attendeeEmail = attendee.email?.toLowerCase();
+            const aEmail = (a?.profile?.email || a?.email || '').toLowerCase();
+            if (attendeeEmail && aEmail && attendeeEmail === aEmail) return true;
+            
+            const attendeeName = attendee.name?.toLowerCase();
+            const aName = [a?.profile?.name?.first, a?.profile?.name?.last].filter(Boolean).join(' ').toLowerCase();
+            if (attendeeName && aName && attendeeName === aName) return true;
+            
+            return false;
+          });
+          if (match) briefingMatch = match;
+        });
+
+        if (!briefingMatch || (briefingMatch?.career?.current_positions?.length <= 1 && (!briefingMatch?.career?.previous_positions || briefingMatch.career.previous_positions.length === 0))) {
+          return null;
+        }
+
+        return (
+          <div key={`background-${index}`} className="bg-white border border-gray-100 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                <FiCalendar className="w-5 h-5 text-gray-900" />
+              </div>
+              <h4 className="text-sm font-bold text-gray-900">Background</h4>
+            </div>
+            <div className="space-y-2 text-sm text-gray-600">
+              {/* Additional current positions (skip first one as it's the main role) */}
+              {briefingMatch?.career?.current_positions?.length > 1 && briefingMatch.career.current_positions.slice(1).map((position, idx) => {
+                const companyName = position.company?.name || position.company_name || '-';
+                const companyUrl = position.company?.url || null;
+                const tenure = position.tenure_months || '';
+                return (
+                  <div key={`current-${idx}`} className="flex items-start">
+                    <span className="mr-2">-</span>
+                    <span>
+                      {position.title || '-'}, {companyUrl ? (
+                        <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {companyName}
+                        </a>
+                      ) : (
+                        <span>{companyName}</span>
+                      )}
+                      {tenure && ` (${tenure})`}
+                    </span>
+                  </div>
+                );
+              })}
+              {/* Previous positions */}
+              {briefingMatch?.career?.previous_positions?.map((position, idx) => {
+                const companyName = position.company?.name || position.company_name || '-';
+                const companyUrl = position.company?.url || null;
+                const tenure = position.tenure_months || '';
+                return (
+                  <div key={`prev-${idx}`} className="flex items-start">
+                    <span className="mr-2">-</span>
+                    <span>
+                      {position.title || '-'}, {companyUrl ? (
+                        <a href={companyUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {companyName}
+                        </a>
+                      ) : (
+                        <span>{companyName}</span>
+                      )}
+                      {tenure && ` (${tenure})`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <ul className="space-y-2 text-sm text-gray-700">
-            {insights.map((insight, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <span className="text-primary mt-1.5">•</span>
-                <span>{insight}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        );
+      })}
+
+      {/* Interesting Fact Section - Separate Card (matching email template) */}
+      {attendeeDetails.length > 0 && readyToSend && attendeeDetails.map((attendee, index) => {
+        const briefingSource = meeting?.briefingSource || meeting?.briefing_source;
+        const briefingCompanies = briefingSource?.companies || {};
+        
+        // Find matching attendee from briefing_source
+        let briefingMatch = null;
+        Object.entries(briefingCompanies).forEach(([companyName, companyData]) => {
+          const briefingAttendees = companyData?.attendees || [];
+          const match = briefingAttendees.find((a) => {
+            const attendeeEmail = attendee.email?.toLowerCase();
+            const aEmail = (a?.profile?.email || a?.email || '').toLowerCase();
+            if (attendeeEmail && aEmail && attendeeEmail === aEmail) return true;
+            
+            const attendeeName = attendee.name?.toLowerCase();
+            const aName = [a?.profile?.name?.first, a?.profile?.name?.last].filter(Boolean).join(' ').toLowerCase();
+            if (attendeeName && aName && attendeeName === aName) return true;
+            
+            return false;
+          });
+          if (match) briefingMatch = match;
+        });
+
+        if (!briefingMatch?.profile?.interesting_fact || 
+            briefingMatch.profile.interesting_fact === "No information found") {
+          return null;
+        }
+
+        return (
+          <div key={`interesting-${index}`} className="bg-white border border-gray-100 rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                <FiTrendingUp className="w-5 h-5 text-gray-900" />
+              </div>
+              <h4 className="text-sm font-bold text-gray-900">Interesting Fact</h4>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+              {briefingMatch.profile.interesting_fact}
+            </p>
+          </div>
+        );
+      })}
 
       {/* Recent LinkedIn Post Section (matching email format) */}
       {recentLinkedInPost && readyToSend && (
@@ -310,7 +488,7 @@ const ResearchDetails = ({ meeting }) => {
           <div className="bg-white border-t border-gray-200"></div>
           <div className="bg-white border border-gray-100 rounded-2xl p-6">
             <div className="flex flex-col items-center mb-5">
-              <FiLinkedin className="w-8 h-8 mb-2 text-blue-600" />
+              <img src="https://d1udkp95fdo7mt.cloudfront.net/images/image_li.png" alt="LinkedIn" className="w-8 h-8 mb-2" />
               <h2 className="text-sm font-semibold text-gray-900">Recent LinkedIn Post</h2>
             </div>
             <div className="text-base text-gray-700 mb-4">
@@ -322,8 +500,13 @@ const ResearchDetails = ({ meeting }) => {
                   href={recentLinkedInPost.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-6 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold rounded-full transition-colors text-xs"
-                  style={{ borderRadius: '50px' }}
+                  className="px-6 py-2.5 text-black font-semibold transition-colors text-xs"
+                  style={{ 
+                    background: '#F3C93B',
+                    borderRadius: '50px',
+                    display: 'inline-block',
+                    textDecoration: 'none'
+                  }}
                 >
                   View more on LinkedIn
                 </a>
@@ -363,6 +546,12 @@ const ResearchDetails = ({ meeting }) => {
         const industry = companyInfoBlock.industry || companyInfo.industry || null;
         const description = companyInfoBlock.description || companyInfo.description || null;
         const markets = companyInfoBlock.markets || companyInfoBlock.key_markets || companyInfo.markets || null;
+        const customers = companyInfoBlock.customers || null;
+        const products = companyInfoBlock.products || companyInfoBlock.primary_products || null;
+        const revenueModel = companyInfoBlock.revenue_model || null;
+        const financialPerformance = companyInfoBlock.financial_performance || null;
+        const competitors = companyInfoBlock.competitors || null;
+        const decisionMakers = companyInfoBlock.decision_makers || null;
         
         // Format headquarters
         let headquartersStr = null;
@@ -406,11 +595,11 @@ const ResearchDetails = ({ meeting }) => {
             </div>
             
             {/* Key Information Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-4 gap-4 mb-6">
               {foundedYear && (
                 <div className="flex flex-col items-center text-center">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                    <FiCalendar className="w-5 h-5 text-gray-900" />
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/calendar_fill.png" alt="Founded" className="w-5 h-5" />
                   </div>
                   <p className="text-xs text-gray-900 mb-0.5">Founded</p>
                   <p className="text-sm font-medium text-gray-500">{foundedYear}</p>
@@ -420,7 +609,7 @@ const ResearchDetails = ({ meeting }) => {
               {headquartersStr && (
                 <div className="flex flex-col items-center text-center">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                    <FiMapPin className="w-5 h-5 text-gray-900" />
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/location_fill.png" alt="Headquarters" className="w-5 h-5" />
                   </div>
                   <p className="text-xs text-gray-900 mb-0.5">Headquarters</p>
                   <p className="text-sm font-medium text-gray-500">{headquartersStr}</p>
@@ -430,7 +619,7 @@ const ResearchDetails = ({ meeting }) => {
               {employeeCount && (
                 <div className="flex flex-col items-center text-center">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                    <FiUsers className="w-5 h-5 text-gray-900" />
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/group_3_fill.png" alt="Employees" className="w-5 h-5" />
                   </div>
                   <p className="text-xs text-gray-900 mb-0.5">No. of Employees</p>
                   <p className="text-sm font-medium text-gray-500">{employeeCount}</p>
@@ -440,7 +629,7 @@ const ResearchDetails = ({ meeting }) => {
               {industry && (
                 <div className="flex flex-col items-center text-center">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                    <FiSettings className="w-5 h-5 text-gray-900" />
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/world_2_fill.png" alt="Industry" className="w-5 h-5" />
                   </div>
                   <p className="text-xs text-gray-900 mb-0.5">Industry</p>
                   <p className="text-sm font-medium text-gray-500">{industry}</p>
@@ -453,24 +642,140 @@ const ResearchDetails = ({ meeting }) => {
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
-                    <FiFileText className="w-5 h-5 text-gray-900" />
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/shopping_bag_2_fill.png" alt="Description" className="w-5 h-5" />
                   </div>
                   <h4 className="text-sm font-semibold text-gray-900">Description</h4>
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed">{description}</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(description)}</p>
             </div>
             )}
             
             {/* Markets */}
             {markets && (
-              <div>
+              <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
-                    <FiGlobe className="w-5 h-5 text-gray-900" />
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/world_2_fill.png" alt="Markets" className="w-5 h-5" />
                   </div>
                   <h4 className="text-sm font-semibold text-gray-900">Markets</h4>
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed">{markets}</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(markets)}</p>
+              </div>
+            )}
+            
+            {/* Customers */}
+            {customers && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/group_3_fill.png" alt="Customers" className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Customers</h4>
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(customers)}</p>
+              </div>
+            )}
+            
+            {/* Primary Products */}
+            {products && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/shopping_bag_2_fill.png" alt="Primary Products" className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Primary Products</h4>
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(products)}</p>
+              </div>
+            )}
+            
+            {/* Revenue Model */}
+            {revenueModel && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/chart_pie_2_fill.png" alt="Revenue Model" className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Revenue Model</h4>
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(revenueModel)}</p>
+              </div>
+            )}
+            
+            {/* Financial Performance */}
+            {financialPerformance && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/chart_bar_fill.png" alt="Financial Performance" className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Financial Performance</h4>
+                </div>
+                <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(financialPerformance)}</p>
+              </div>
+            )}
+            
+            {/* Key Competitors */}
+            {competitors && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/target_fill.png" alt="Key Competitors" className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Key Competitors</h4>
+                </div>
+                {Array.isArray(competitors) ? (
+                  <div className="space-y-3 text-sm text-gray-700">
+                    {competitors.slice(0, 3).map((competitor, idx) => {
+                      const competitorName = typeof competitor === 'string' ? competitor : (competitor.name || '');
+                      const competitorSummary = typeof competitor === 'string' ? null : (competitor.summary || null);
+                      return (
+                        <div key={idx}>
+                          <span className="font-semibold">{idx + 1}. {competitorName}</span>
+                          {competitorSummary && <span> {linkifyText(competitorSummary)}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(competitors)}</p>
+                )}
+              </div>
+            )}
+            
+            {/* Decision Makers */}
+            {decisionMakers && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
+                    <img src="https://d1udkp95fdo7mt.cloudfront.net/images/task_fill.png" alt="Decision Makers" className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Decision Makers</h4>
+                </div>
+                {Array.isArray(decisionMakers) ? (
+                  <div className="space-y-2 text-sm text-gray-700">
+                    {decisionMakers.map((maker, idx) => {
+                      const makerText = typeof maker === 'string' ? maker : (maker.name || maker.summary || JSON.stringify(maker));
+                      return (
+                        <div key={idx}>
+                          <span>{linkifyText(makerText)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : typeof decisionMakers === 'string' && decisionMakers.includes('\n') ? (
+                  <div className="space-y-2 text-sm text-gray-700">
+                    {decisionMakers.split('\n').filter(line => line.trim()).map((line, idx) => (
+                      <div key={idx}>
+                        <span>{linkifyText(line.trim())}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-700">
+                    <span>{linkifyText(decisionMakers)}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
