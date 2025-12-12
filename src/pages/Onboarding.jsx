@@ -396,14 +396,49 @@ const Onboarding = () => {
 
       const result = await response.json();
       
-      if (response.ok && result.success !== false) {
+      // Also save custom insights questions
+      const questionsArray = [];
+      Object.entries(selectedQuestions).forEach(([category, questions]) => {
+        questions.forEach(question => {
+          questionsArray.push({
+            question: question,
+            category: category
+          });
+        });
+      });
+      
+      // Add custom question if provided
+      if (customQuestion.trim()) {
+        questionsArray.push({
+          question: customQuestion.trim(),
+          category: 'other'
+        });
+      }
+
+      console.log('Saving questions:', questionsArray);
+
+      const questionsResponse = await fetch(`${apiUrl}/preferences/questions`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ questions: questionsArray }),
+      });
+
+      const questionsResult = await questionsResponse.json();
+      
+      if (response.ok && result.success !== false && questionsResult.success) {
         setSaveMessage('✅ Onboarding completed! Redirecting to dashboard...');
         // Wait a moment to show success message, then redirect
         setTimeout(() => {
           navigate('/dashboard');
         }, 1500);
       } else {
-        setSaveMessage(`❌ ${result.message || 'Failed to save settings. Please try again.'}`);
+        const errors = [];
+        if (!result.success) errors.push(`ICP: ${result.message || 'Failed'}`);
+        if (!questionsResult.success) errors.push(`Questions: ${questionsResult.detail || 'Failed'}`);
+        setSaveMessage(`❌ ${errors.join(', ') || 'Failed to save settings. Please try again.'}`);
         setIsSaving(false);
       }
       

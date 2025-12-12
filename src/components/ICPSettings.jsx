@@ -346,13 +346,48 @@ const ICPSettings = () => {
 
       const result = await response.json();
       
-      if (result.success) {
+      // Also save custom insights questions
+      const questionsArray = [];
+      Object.entries(selectedQuestions).forEach(([category, questions]) => {
+        questions.forEach(question => {
+          questionsArray.push({
+            question: question,
+            category: category
+          });
+        });
+      });
+      
+      // Add custom question if provided
+      if (customQuestion && customQuestion.trim()) {
+        questionsArray.push({
+          question: customQuestion.trim(),
+          category: 'other'
+        });
+      }
+
+      console.log('Saving questions:', questionsArray);
+
+      const questionsResponse = await fetch(`${apiUrl}/preferences/questions`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ questions: questionsArray }),
+      });
+
+      const questionsResult = await questionsResponse.json();
+      
+      if (result.success && questionsResult.success) {
         setSaveMessage('✅ Settings saved successfully!');
         setTimeout(() => {
           setSaveMessage('');
         }, 3000);
       } else {
-        setSaveMessage(`❌ ${result.message || 'Failed to save settings'}`);
+        const errors = [];
+        if (!result.success) errors.push(`ICP: ${result.message || 'Failed'}`);
+        if (!questionsResult.success) errors.push(`Questions: ${questionsResult.detail || 'Failed'}`);
+        setSaveMessage(`❌ ${errors.join(', ') || 'Failed to save settings'}`);
       }
       
     } catch (error) {
