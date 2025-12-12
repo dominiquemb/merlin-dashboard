@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import ICPMeetingCard from '../components/ICPMeetingCard';
 import CreditsBadge from '../components/CreditsBadge';
-import { FiAlertCircle, FiCalendar, FiCreditCard, FiRefreshCw, FiArrowRight, FiTarget, FiSettings, FiTrendingUp, FiFilter, FiBriefcase, FiZap } from 'react-icons/fi';
+import { FiAlertCircle, FiCalendar, FiCreditCard, FiRefreshCw, FiArrowRight, FiTarget, FiSettings, FiTrendingUp, FiFilter, FiBriefcase, FiZap, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
 // Helper function to get auth token
 const getAuthToken = async () => {
@@ -41,6 +41,14 @@ const ICPAnalysis = () => {
   // const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'high', 'medium', 'low'
   const [timeframe, setTimeframe] = useState('week'); // 'week', 'month'
   const [avgIcpScoreData, setAvgIcpScoreData] = useState({ current: null, change: null });
+  
+  // ICP Criteria state management
+  const [icpAnalysisEnabled, setIcpAnalysisEnabled] = useState(true);
+  const [icpCriteriaExpanded, setIcpCriteriaExpanded] = useState(false);
+  const [employeeRanges, setEmployeeRanges] = useState([]);
+  const [yearsFounded, setYearsFounded] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   // Get current week range
   const getWeekRange = () => {
@@ -717,14 +725,14 @@ const ICPAnalysis = () => {
     return `${sign}${avgIcpScoreData.change.toFixed(0)}%`;
   };
 
-  // Fetch ICP criteria
+  // Fetch ICP criteria and load into state
   const fetchICPCriteria = async () => {
     setIsLoadingCriteria(true);
     try {
       const token = await getAuthToken();
       const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
 
-      const response = await fetch(`${apiUrl}/icp/criteria`, {
+      const response = await fetch(`${apiUrl}/icp/status`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -733,25 +741,112 @@ const ICPAnalysis = () => {
 
       const result = await response.json();
 
-      if (result.success && result.criteria) {
-        setIcpCriteria(result.criteria);
+      if (result.icp_criteria) {
+        const criteria = result.icp_criteria;
+        setIcpCriteria(criteria);
+        
+        // Set ICP Focus toggle state
+        if (typeof criteria.enabled !== 'undefined') {
+          setIcpAnalysisEnabled(criteria.enabled);
+          setIcpCriteriaExpanded(criteria.enabled);
+        }
+        
+        // Map backend values to frontend format for employee ranges
+        const backendToFrontendEmployees = {
+          '1-10': '1-10',
+          '11-50': '11-50',
+          '51-100': '51-200',
+          '101-500': '201-500',
+          '500+': '501-1000',
+        };
+        
+        // Map backend values to frontend format for years
+        const backendToFrontendYears = {
+          'Last 12 months': '0-2',
+          '1-3 years': '3-5',
+          'More than 3 years': '6-10',
+        };
+        
+        if (criteria.employee_sizes && Array.isArray(criteria.employee_sizes)) {
+          const mappedSizes = criteria.employee_sizes.map(size => backendToFrontendEmployees[size] || size);
+          setEmployeeRanges(mappedSizes);
+        }
+        
+        if (criteria.founded_years && Array.isArray(criteria.founded_years)) {
+          const mappedYears = criteria.founded_years.map(year => backendToFrontendYears[year] || year);
+          setYearsFounded(mappedYears);
+        }
       }
-      // TEMPORARY: Uncomment below to use filler criteria data
-      // else {
-      //   setIcpCriteria({
-      //     employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
-      //     founded_years: ['1-3 years', 'More than 3 years'],
-      //   });
-      // }
     } catch (error) {
       console.error('Error fetching ICP criteria:', error);
-      // TEMPORARY: Uncomment below to use filler criteria data on error
-      // setIcpCriteria({
-      //   employee_sizes: ['1-10', '11-50', '51-100', '101-500', '500+'],
-      //   founded_years: ['1-3 years', 'More than 3 years'],
-      // });
     } finally {
       setIsLoadingCriteria(false);
+    }
+  };
+  
+  // Save ICP settings
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    setSaveMessage('');
+    
+    try {
+      const token = await getAuthToken();
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+
+      // Map frontend values to backend format
+      const employeeSizesMap = {
+        '1-10': '1-10',
+        '11-50': '11-50',
+        '51-200': '51-100',
+        '201-500': '101-500',
+        '501-1000': '500+',
+        '1001-5000': '500+',
+        '5001+': '500+',
+      };
+
+      const yearsFoundedMap = {
+        '0-2': 'Last 12 months',
+        '3-5': '1-3 years',
+        '6-10': 'More than 3 years',
+        '11-20': 'More than 3 years',
+        '20+': 'More than 3 years',
+      };
+
+      const requestBody = {
+        enabled: icpAnalysisEnabled,
+        employee_sizes: employeeRanges.map(range => employeeSizesMap[range] || range),
+        founded_years: yearsFounded.map(year => yearsFoundedMap[year] || year),
+      };
+
+      console.log('Saving ICP criteria:', requestBody);
+
+      const response = await fetch(`${apiUrl}/icp/criteria`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setSaveMessage('✅ Settings saved successfully!');
+        // Reload criteria to reflect changes
+        await fetchICPCriteria();
+        setTimeout(() => {
+          setSaveMessage('');
+        }, 3000);
+      } else {
+        setSaveMessage(`❌ ${result.message || 'Failed to save settings'}`);
+      }
+      
+    } catch (error) {
+      console.error('Error saving ICP settings:', error);
+      setSaveMessage('❌ Failed to save settings');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -824,9 +919,12 @@ const ICPAnalysis = () => {
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center justify-center mb-4">
             <h1 className="text-3xl font-bold text-gray-900">Your Weekly ICP Report</h1>
           </div>
+          <p className="text-center text-gray-600 max-w-3xl mx-auto mb-6">
+            Our Weekly ICP Report flags meetings that fall outside your ideal customer profile, so you can skip low-value calls and focus on what matters. Reports are delivered every Monday and Wednesday morning, keeping you on top of your pipeline without extra effort.
+          </p>
         </div>
 
         {/* Summary Section - Light Blue */}
@@ -999,140 +1097,148 @@ const ICPAnalysis = () => {
           </div>
         )}
 
-        {/* Your ICP Criteria Section */}
+        {/* ICP Focus Section */}
         <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6 mt-8">
-          <div className="flex items-center gap-2 mb-4">
-            <FiTarget className="w-5 h-5 text-purple-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Your ICP Criteria</h2>
+          {/* ICP Focus Toggle */}
+          <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg mb-4">
+            <div className="flex items-center gap-3">
+              <FiTarget className="w-5 h-5 text-green-600" />
+              <div>
+                <h3 className="font-semibold text-gray-900">ICP Focus</h3>
+                <p className="text-sm text-gray-600">Include Ideal Customer Profile analysis in reports</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const newState = !icpAnalysisEnabled;
+                setIcpAnalysisEnabled(newState);
+                setIcpCriteriaExpanded(newState);
+              }}
+              className={`relative w-12 h-6 rounded-full transition ${
+                icpAnalysisEnabled ? 'bg-green-600' : 'bg-gray-300'
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                  icpAnalysisEnabled ? 'transform translate-x-6' : ''
+                }`}
+              />
+            </button>
           </div>
-          
-          <p className="text-sm text-gray-600 mb-6">
-            Your criteria help you focus on high-quality opportunities that lead to better engagement, conversion, and retention. 
-            Quality over quantity—refine your pipeline to prioritize meetings that truly matter.
-          </p>
 
-          {isLoadingCriteria ? (
-            <div className="text-center py-4">
-              <p className="text-gray-500">Loading criteria...</p>
-            </div>
-          ) : icpCriteria ? (
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              {/* Left Column */}
-              <div className="space-y-4">
-                {icpCriteria.employee_sizes && icpCriteria.employee_sizes.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Company Size</p>
-                    <p className="text-sm text-gray-600">
-                      {Array.isArray(icpCriteria.employee_sizes) 
-                        ? icpCriteria.employee_sizes.join(', ') 
-                        : icpCriteria.employee_sizes}
-                    </p>
-                  </div>
+          {/* Collapsible ICP Criteria Section */}
+          {icpAnalysisEnabled && (
+            <div className="mt-4">
+              <button
+                onClick={() => setIcpCriteriaExpanded(!icpCriteriaExpanded)}
+                className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition"
+              >
+                <div className="flex items-center gap-2">
+                  <FiTarget className="w-4 h-4 text-gray-600" />
+                  <span className="font-medium text-gray-900">Define Your Ideal Customer Profile</span>
+                </div>
+                {icpCriteriaExpanded ? (
+                  <FiChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <FiChevronDown className="w-5 h-5 text-gray-500" />
                 )}
-                {icpCriteria.regions && icpCriteria.regions.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Regions</p>
-                    <p className="text-sm text-gray-600">
-                      {Array.isArray(icpCriteria.regions) 
-                        ? icpCriteria.regions.join(', ') 
-                        : icpCriteria.regions}
-                    </p>
-                  </div>
-                )}
-              </div>
+              </button>
 
-              {/* Right Column */}
-              <div className="space-y-4">
-                {icpCriteria.industries && icpCriteria.industries.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Industries</p>
-                    <p className="text-sm text-gray-600">
-                      {Array.isArray(icpCriteria.industries) 
-                        ? icpCriteria.industries.join(', ') 
-                        : icpCriteria.industries}
-                    </p>
-                  </div>
-                )}
-                {icpCriteria.founded_years && icpCriteria.founded_years.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 mb-1">Growth Stage</p>
-                    <p className="text-sm text-gray-600">
-                      {Array.isArray(icpCriteria.founded_years) 
-                        ? icpCriteria.founded_years.join(', ') 
-                        : icpCriteria.founded_years}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 p-4 bg-white border border-gray-200 rounded-lg">
-              <p className="text-sm text-gray-600 mb-4">Set criteria to identify which meetings align with your target customer profile</p>
+              {icpCriteriaExpanded && (
+                <div className="mt-4 space-y-4 p-4 bg-white border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-4">Set criteria to identify which meetings align with your target customer profile</p>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <FiBriefcase className="w-4 h-4" />
-                    Number of Employees (select all that apply)
-                  </label>
-                  <div className="space-y-2">
-                    {['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001+'].map(range => (
-                      <label key={range} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed">
-                        <input
-                          type="checkbox"
-                          disabled
-                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                        />
-                        <span className="text-sm text-gray-700">{range} employees</span>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <FiBriefcase className="w-4 h-4" />
+                        Number of Employees (select all that apply)
                       </label>
-                    ))}
-                  </div>
-                </div>
+                      <div className="space-y-2">
+                        {['1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5001+'].map(range => {
+                          const isChecked = employeeRanges.includes(range);
+                          return (
+                            <label key={range} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setEmployeeRanges([...employeeRanges, range]);
+                                  } else {
+                                    setEmployeeRanges(employeeRanges.filter(r => r !== range));
+                                  }
+                                }}
+                                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                              />
+                              <span className="text-sm text-gray-700">{range} employees</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <FiTarget className="w-4 h-4" />
-                    Year Founded (select all that apply)
-                  </label>
-                  <div className="space-y-2">
-                    {['0-2', '3-5', '6-10', '11-20', '20+'].map(years => (
-                      <label key={years} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed">
-                        <input
-                          type="checkbox"
-                          disabled
-                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                        />
-                        <span className="text-sm text-gray-700">Founded {years} years ago</span>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <FiTarget className="w-4 h-4" />
+                        Year Founded (select all that apply)
                       </label>
-                    ))}
+                      <div className="space-y-2">
+                        {['0-2', '3-5', '6-10', '11-20', '20+'].map(years => (
+                          <label key={years} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={yearsFounded.includes(years)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setYearsFounded([...yearsFounded, years]);
+                                } else {
+                                  setYearsFounded(yearsFounded.filter(y => y !== years));
+                                }
+                              }}
+                              className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                            />
+                            <span className="text-sm text-gray-700">Founded {years} years ago</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                        <FiZap className="w-4 h-4" />
+                        Other (Optional)
+                        <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold">Beta</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Additional criteria..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
-
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                    <FiZap className="w-4 h-4" />
-                    Other (Optional)
-                    <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold">Beta</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Additional criteria..."
-                    disabled
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 text-center">
-                <button
-                  onClick={() => navigate('/icp-settings')}
-                  className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition"
-                >
-                  Configure ICP Criteria
-                </button>
-              </div>
+              )}
             </div>
           )}
+          
+          {/* Save Message */}
+          {saveMessage && (
+            <div className={`mt-4 p-3 rounded-lg ${saveMessage.includes('✅') ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+              {saveMessage}
+            </div>
+          )}
+
+          {/* Save Changes Button */}
+          <div className="flex items-center justify-end gap-3 mt-6">
+            <button
+              onClick={handleSaveSettings}
+              disabled={isSaving}
+              className="px-6 py-3 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition disabled:opacity-50"
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </div>
 
       </main>
