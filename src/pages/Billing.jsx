@@ -16,6 +16,7 @@ import {
   getSubscriptionStatus,
   createSubscription,
   updateAutoRenewal,
+  createBillingPortalSession,
 } from "../lib/billingApi";
 
 const Billing = () => {
@@ -28,6 +29,7 @@ const Billing = () => {
   const [isLoadingSubscription, setIsLoadingSubscription] = useState(true);
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isUpdatingAutoRenewal, setIsUpdatingAutoRenewal] = useState(false);
+  const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
 
   const subscriptionPlans = useMemo(() => [
     {
@@ -233,25 +235,45 @@ const Billing = () => {
     return plan.isCurrent || isSubscribing || plan.key === "free";
   };
 
-  const handleToggleAutoRenewal = async () => {
+  const handleToggleEarlyRenewal = async () => {
     if (subscriptionStatus?.plan === "free") {
       return; // No subscription to manage
     }
 
     const newValue = !subscriptionStatus?.auto_renewal_enabled;
+    console.log("Toggling early renewal to:", newValue);
     
     try {
       setIsUpdatingAutoRenewal(true);
-      await updateAutoRenewal(newValue);
+      const result = await updateAutoRenewal(newValue);
+      console.log("Update result:", result);
+      
       setSubscriptionStatus(prev => ({
         ...prev,
         auto_renewal_enabled: newValue
       }));
     } catch (error) {
-      console.error("Error updating auto renewal:", error);
-      alert("Failed to update auto renewal preference. Please try again.");
+      console.error("Error updating early renewal:", error);
+      alert(`Failed to update early renewal preference: ${error.message || "Please try again."}`);
     } finally {
       setIsUpdatingAutoRenewal(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (subscriptionStatus?.plan === "free") {
+      return; // No subscription to cancel
+    }
+
+    try {
+      setIsOpeningBillingPortal(true);
+      const portalUrl = await createBillingPortalSession();
+      // Redirect to Stripe billing portal
+      window.location.href = portalUrl;
+    } catch (error) {
+      console.error("Error opening billing portal:", error);
+      alert("Failed to open billing portal. Please try again.");
+      setIsOpeningBillingPortal(false);
     }
   };
 
@@ -324,29 +346,34 @@ const Billing = () => {
             </div>
           </div>
 
-          {/* Auto Renewal Toggle */}
+          {/* Early Renewal Toggle & Cancel Subscription */}
           {subscriptionStatus?.plan !== "free" && (
-            <div className="border-t border-accent pt-4">
+            <div className="border-t border-accent pt-4 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-900 mb-1">
-                    Auto Renewal
+                    Early Renewal
                   </p>
                   <p className="text-xs text-gray-600">
                     {subscriptionStatus?.auto_renewal_enabled 
-                      ? "Your subscription will automatically renew at the end of each billing period"
-                      : "Your subscription will not automatically renew. You'll need to manually renew when it expires"}
+                      ? "If you run out of credits, your subscription will automatically renew early to ensure you never miss important insights"
+                      : "Early renewal is disabled. You'll need to manually renew when credits run out"}
                   </p>
                 </div>
                 <button
-                  onClick={handleToggleAutoRenewal}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleToggleEarlyRenewal();
+                  }}
                   disabled={isUpdatingAutoRenewal || isLoadingSubscription}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                     subscriptionStatus?.auto_renewal_enabled ? 'bg-primary' : 'bg-gray-300'
                   }`}
                   role="switch"
                   aria-checked={subscriptionStatus?.auto_renewal_enabled}
-                  aria-label="Toggle auto renewal"
+                  aria-label="Toggle early renewal"
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -355,9 +382,20 @@ const Billing = () => {
                   />
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Note: This is a preference setting and does not cancel your Stripe subscription. To cancel your subscription, please contact support.
-              </p>
+              
+              {/* Cancel Subscription Button */}
+              <div className="pt-2 border-t border-gray-200">
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={isOpeningBillingPortal || isLoadingSubscription}
+                  className="w-full px-4 py-2.5 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isOpeningBillingPortal ? "Opening..." : "Cancel Subscription"}
+                </button>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Manage your subscription, payment methods, and billing history on Stripe
+                </p>
+              </div>
             </div>
           )}
         </div>

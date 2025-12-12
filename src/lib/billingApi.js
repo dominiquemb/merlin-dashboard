@@ -265,3 +265,31 @@ export const updateAutoRenewal = async (autoRenewalEnabled) => {
     throw error;
   }
 };
+
+/**
+ * Create Stripe billing portal session
+ * Redirects user to Stripe's billing portal to manage subscription
+ */
+export const createBillingPortalSession = async () => {
+  try {
+    const token = await getAuthToken();
+    const response = await fetch(`${API_URL}/stripe/billing-portal`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Failed to create billing portal session');
+    }
+
+    const data = await response.json();
+    return data.url; // Returns the portal URL
+  } catch (error) {
+    console.error('Error creating billing portal session:', error);
+    throw error;
+  }
+};
