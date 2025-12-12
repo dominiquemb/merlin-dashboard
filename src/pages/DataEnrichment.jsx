@@ -52,8 +52,6 @@ const DataEnrichment = () => {
     { id: 'location', label: 'Location', description: 'Headquarters location' },
     { id: 'founded_year', label: 'Founded Year', description: 'Year company was founded' },
     { id: 'description', label: 'Description', description: 'Company overview' },
-    { id: 'tech_stack', label: 'Tech Stack', description: 'Technologies used' },
-    { id: 'funding', label: 'Funding', description: 'Funding stage and amount' },
   ];
 
   const toggleField = (fieldId) => {
@@ -303,7 +301,7 @@ const DataEnrichment = () => {
             <h1 className="text-3xl font-bold text-gray-900">Data Enrichment</h1>
             <div className="flex items-center gap-2 text-sm text-primary bg-accent-light border border-accent rounded-lg px-3 py-1.5">
               <FiCreditCard className="w-4 h-4" />
-              <span className="font-medium">1 credit/record</span>
+              <span className="font-medium">3 credits per contact enriched (up to 5 new fields)</span>
             </div>
           </div>
           <p className="text-gray-600">
@@ -369,7 +367,6 @@ const DataEnrichment = () => {
                   <p className="text-sm text-green-700 mt-2">
                     ✓ Job created successfully<br />
                     ✓ Credits deducted<br />
-                    ✓ Enrichment will be processed within 15 minutes<br />
                     ✓ Your enriched CSV will be emailed to you once processing is complete
                   </p>
                 </div>
@@ -499,6 +496,41 @@ const DataEnrichment = () => {
                       </div>
                     </label>
                   ))}
+                </div>
+                
+                {/* Contact Us for Other Insights */}
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <FiInfo className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-900 mb-2">
+                        <span className="font-semibold">Need other types of insights?</span>
+                      </p>
+                      <button
+                        onClick={() => {
+                          const formData = new FormData();
+                          formData.append('name', user?.user_metadata?.full_name || user?.email || 'User');
+                          formData.append('email', user?.email || '');
+                          formData.append('message', 'Hi Merlin, I\'d like to learn about other types of data enrichment insights available.');
+                          formData.append('_subject', 'Data Enrichment: Other Insights Inquiry');
+                          formData.append('_captcha', 'false');
+                          
+                          fetch('https://formsubmit.co/insights@usemerlin.io', {
+                            method: 'POST',
+                            body: formData,
+                            headers: { 'Accept': 'application/json' }
+                          }).then(() => {
+                            alert('Message sent! We\'ll get back to you shortly.');
+                          }).catch(() => {
+                            alert('Failed to send message. Please try again.');
+                          });
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium underline"
+                      >
+                        Contact us to learn more
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
