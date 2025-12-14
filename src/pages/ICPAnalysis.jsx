@@ -586,10 +586,17 @@ const ICPAnalysis = () => {
       });
     }
     
-    // Generate concerns from missing/non-matching criteria - ALWAYS show what's missing
+    // Generate concerns from missing/non-matching criteria
+    // Exclude Region, Budget, Industry, and Growth when they are "Not specified"
+    const criteriaToExcludeWhenNotSpecified = ['Region', 'Budget', 'Industry', 'Growth'];
     const missingCriteria = criteriaBreakdown.filter(c => c.matches === false);
     const generatedConcerns = [];
     missingCriteria.forEach(criterion => {
+      // Skip criteria that are not specified and in the exclusion list
+      if (criterion.value === 'Not specified' && criteriaToExcludeWhenNotSpecified.includes(criterion.label)) {
+        return; // Skip this criterion
+      }
+      
       if (criterion.value !== 'Not specified' && criterion.value !== '') {
         generatedConcerns.push(`${criterion.label}: ${criterion.value} does not match ICP criteria`);
       } else {
@@ -764,16 +771,22 @@ const ICPAnalysis = () => {
         const backendToFrontendYears = {
           'Last 12 months': '0-2',
           '1-3 years': '3-5',
-          'More than 3 years': '6-10',
+          'More than 3 years': '6-10', // This maps to 6-10, but could also be 11-20 or 20+ depending on actual company age
         };
         
         if (criteria.employee_sizes && Array.isArray(criteria.employee_sizes)) {
-          const mappedSizes = criteria.employee_sizes.map(size => backendToFrontendEmployees[size] || size);
+          // Remove duplicates and map backend format to frontend format
+          const mappedSizes = Array.from(new Set(criteria.employee_sizes))
+            .map(size => backendToFrontendEmployees[size] || size)
+            .filter(size => size); // Remove any undefined/null values
           setEmployeeRanges(mappedSizes);
         }
         
         if (criteria.founded_years && Array.isArray(criteria.founded_years)) {
-          const mappedYears = criteria.founded_years.map(year => backendToFrontendYears[year] || year);
+          // Remove duplicates and map backend format to frontend format
+          const mappedYears = Array.from(new Set(criteria.founded_years))
+            .map(year => backendToFrontendYears[year] || year)
+            .filter(year => year); // Remove any undefined/null values
           setYearsFounded(mappedYears);
         }
       }
@@ -936,30 +949,42 @@ const ICPAnalysis = () => {
             <div className="mt-4">
               <p className="text-sm font-bold mb-2" style={{ color: '#1E40AF' }}>Your specific criteria:</p>
               <div className="space-y-1 text-sm" style={{ color: '#1E40AF' }}>
-                {icpCriteria && icpCriteria.employee_sizes && icpCriteria.employee_sizes.length > 0 && (
+                {employeeRanges && employeeRanges.length > 0 && (
                   <p>
                     <span className="font-medium">Employee size:</span>{' '}
-                    {Array.isArray(icpCriteria.employee_sizes)
-                      ? icpCriteria.employee_sizes.map(size => {
-                          // Map backend format to display format
-                          const sizeMap = {
-                            '1-10': '1 - 10',
-                            '11-50': '11 - 50',
-                            '51-100': '51-100',
-                            '101-500': '101-500',
-                            '500+': '500+',
-                          };
-                          return sizeMap[size] || size;
-                        }).join(', ')
-                      : icpCriteria.employee_sizes}
+                    {Array.from(new Set(employeeRanges)) // Remove duplicates
+                      .map(range => {
+                        // Map frontend format to display format
+                        const displayMap = {
+                          '1-10': '1-10',
+                          '11-50': '11-50',
+                          '51-200': '51-200',
+                          '201-500': '201-500',
+                          '501-1000': '501-1000',
+                          '1001-5000': '1001-5000',
+                          '5001+': '5001+',
+                        };
+                        return displayMap[range] || range;
+                      })
+                      .join(', ')}
                   </p>
                 )}
-                {icpCriteria && icpCriteria.founded_years && icpCriteria.founded_years.length > 0 && (
+                {yearsFounded && yearsFounded.length > 0 && (
                   <p>
                     <span className="font-medium">Founded years:</span>{' '}
-                    {Array.isArray(icpCriteria.founded_years)
-                      ? icpCriteria.founded_years.join(', ')
-                      : icpCriteria.founded_years}
+                    {Array.from(new Set(yearsFounded)) // Remove duplicates
+                      .map(year => {
+                        // Map frontend format to display format
+                        const displayMap = {
+                          '0-2': 'Founded 0-2 years ago',
+                          '3-5': 'Founded 3-5 years ago',
+                          '6-10': 'Founded 6-10 years ago',
+                          '11-20': 'Founded 11-20 years ago',
+                          '20+': 'Founded 20+ years ago',
+                        };
+                        return displayMap[year] || year;
+                      })
+                      .join(', ')}
                   </p>
                 )}
               </div>

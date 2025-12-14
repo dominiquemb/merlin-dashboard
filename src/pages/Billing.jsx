@@ -488,19 +488,6 @@ const Billing = () => {
               </div>
             ))}
           </div>
-
-          {/* Early Renewal Info */}
-          <div className="mt-6 bg-accent-light border border-accent rounded-lg p-4 flex items-start gap-3">
-            <FiInfo className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-gray-900">
-              <p className="font-medium mb-1">Early Renewal Available</p>
-              <p>
-                On Growth and Pro plans, if you run out of credits, your subscription will automatically renew early. 
-                This ensures you never miss important meeting insights or data enrichment opportunities. 
-                Credits are reset to your plan's monthly allowance when renewal occurs.
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* How Credits Work Section */}
