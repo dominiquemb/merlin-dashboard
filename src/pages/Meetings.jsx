@@ -199,28 +199,8 @@ const augmentMeetingWithEnrichment = (event, meeting, userEmail) => {
       };
     }
 
-    // Handle custom insights - they're stored as array of objects with question, answer, sources
-    const customInsights = companyInfoBlock?.custom_insights;
-    if (Array.isArray(customInsights)) {
-      customInsights.forEach((insight) => {
-        if (insight && typeof insight === 'object') {
-          // Format custom insight as "Question: Answer"
-          const question = insight.question || '';
-          const answer = insight.answer || '';
-          if (question && answer) {
-            insights.add(`${question}: ${answer}`);
-          } else if (typeof insight === 'string') {
-            insights.add(insight);
-          }
-        } else if (typeof insight === 'string') {
-          insights.add(insight);
-        }
-      });
-    } else if (customInsights) {
-      collectInsightsFromObject(customInsights).forEach((item) =>
-        insights.add(item)
-      );
-    }
+    // Custom insights are displayed in their own section inside Company Information,
+    // so we do NOT merge them into the general insights list here to avoid duplication.
     collectInsightsFromObject(companyData?.stripe_product_recommendations).forEach((item) =>
       insights.add(item)
     );

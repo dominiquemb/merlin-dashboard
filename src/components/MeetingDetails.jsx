@@ -552,6 +552,9 @@ const ResearchDetails = ({ meeting }) => {
         const financialPerformance = companyInfoBlock.financial_performance || null;
         const competitors = companyInfoBlock.competitors || null;
         const decisionMakers = companyInfoBlock.decision_makers || null;
+        const customInsights = Array.isArray(companyInfoBlock.custom_insights)
+          ? companyInfoBlock.custom_insights
+          : [];
         
         // Format headquarters
         let headquartersStr = null;
@@ -673,6 +676,86 @@ const ResearchDetails = ({ meeting }) => {
                   <h4 className="text-sm font-semibold text-gray-900">Customers</h4>
                 </div>
                 <p className="text-sm text-gray-700 leading-relaxed">{linkifyText(customers)}</p>
+              </div>
+            )}
+            
+            {/* Custom Insights (match email template layout) */}
+            {customInsights.length > 0 && (
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: '#FBBF24' }}
+                  >
+                    <img
+                      src="https://d1udkp95fdo7mt.cloudfront.net/images/lightbulb_fill.png"
+                      alt="Custom Insights"
+                      className="w-5 h-5"
+                    />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900">Custom Insights</h4>
+                </div>
+
+                <div className="space-y-4">
+                  {customInsights.map((insight, idx) => {
+                    if (!insight) return null;
+
+                    const category = insight.category || '';
+                    const question = insight.question || '';
+                    const answer = insight.answer || '';
+                    const sources = Array.isArray(insight.sources) ? insight.sources : [];
+
+                    // Skip completely empty entries
+                    if (!question && !answer && sources.length === 0) return null;
+
+                    return (
+                      <div key={idx} className="text-sm text-gray-700">
+                        {/* Question / heading */}
+                        {(category || question) && (
+                          <p className="font-semibold text-gray-900 mb-1">
+                            {category && <span>{category}: </span>}
+                            {question}
+                          </p>
+                        )}
+
+                        {/* Answer */}
+                        {answer && (
+                          <p className="mb-1 leading-relaxed">
+                            - {linkifyText(answer)}
+                          </p>
+                        )}
+
+                        {/* Sources */}
+                        {sources.length > 0 && (
+                          <p className="text-xs text-gray-500 italic">
+                            sources:{' '}
+                            {sources.map((src, sIdx) => {
+                              if (!src) return null;
+                              const url =
+                                typeof src === 'string' && (src.startsWith('http://') || src.startsWith('https://'))
+                                  ? src
+                                  : `https://${src}`;
+                              const label = src.length > 60 ? `${src.slice(0, 57)}…` : src;
+                              return (
+                                <span key={sIdx}>
+                                  <a
+                                    href={url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                  >
+                                    “{label}”
+                                  </a>
+                                  {sIdx < sources.length - 1 && ', '}
+                                </span>
+                              );
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
             
