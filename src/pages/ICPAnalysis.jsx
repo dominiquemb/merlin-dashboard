@@ -47,6 +47,7 @@ const ICPAnalysis = () => {
   const [icpCriteriaExpanded, setIcpCriteriaExpanded] = useState(false);
   const [employeeRanges, setEmployeeRanges] = useState([]);
   const [yearsFounded, setYearsFounded] = useState([]);
+  const [otherCriteria, setOtherCriteria] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
@@ -795,6 +796,13 @@ const ICPAnalysis = () => {
             .filter(year => year); // Remove any undefined/null values
           setYearsFounded(mappedYears);
         }
+
+        // Load any saved \"other\" criteria
+        if (typeof criteria.other_criteria === 'string') {
+          setOtherCriteria(criteria.other_criteria);
+        } else {
+          setOtherCriteria('');
+        }
       }
     } catch (error) {
       console.error('Error fetching ICP criteria:', error);
@@ -835,6 +843,7 @@ const ICPAnalysis = () => {
         enabled: icpAnalysisEnabled,
         employee_sizes: employeeRanges.map(range => employeeSizesMap[range] || range),
         founded_years: yearsFounded.map(year => yearsFoundedMap[year] || year),
+        other_criteria: otherCriteria && otherCriteria.trim() ? otherCriteria.trim() : null,
       };
 
       console.log('Saving ICP criteria:', requestBody);
@@ -991,6 +1000,12 @@ const ICPAnalysis = () => {
                         return displayMap[year] || year;
                       })
                       .join(', ')}
+                  </p>
+                )}
+                {otherCriteria && otherCriteria.trim() && (
+                  <p>
+                    <span className="font-medium">Other:</span>{' '}
+                    {otherCriteria.trim()}
                   </p>
                 )}
               </div>
@@ -1245,6 +1260,8 @@ const ICPAnalysis = () => {
                         type="text"
                         placeholder="Additional criteria..."
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                        value={otherCriteria}
+                        onChange={(e) => setOtherCriteria(e.target.value)}
                       />
                     </div>
                   </div>
