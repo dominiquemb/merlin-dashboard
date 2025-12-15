@@ -588,10 +588,16 @@ const ICPAnalysis = () => {
     
     // Generate concerns from missing/non-matching criteria
     // Exclude Region, Budget, Industry, and Growth when they are "Not specified"
+    // Also exclude Size-based concerns entirely (these are already covered in the summary)
     const criteriaToExcludeWhenNotSpecified = ['Region', 'Budget', 'Industry', 'Growth'];
     const missingCriteria = criteriaBreakdown.filter(c => c.matches === false);
     const generatedConcerns = [];
     missingCriteria.forEach(criterion => {
+      // Completely skip Size criteria in the detailed reasons
+      if (criterion.label === 'Size') {
+        return;
+      }
+      
       // Skip criteria that are not specified and in the exclusion list
       if (criterion.value === 'Not specified' && criteriaToExcludeWhenNotSpecified.includes(criterion.label)) {
         return; // Skip this criterion
