@@ -995,17 +995,6 @@ const MeetingDetails = ({ meeting }) => {
                   <span>{platform || rawEvent?.location || 'No location specified'}</span>
                 </p>
               </div>
-              <div>
-                <p className="text-gray-500 uppercase tracking-wide text-xs mb-1">Enrichment status</p>
-                <p className="flex items-center gap-2">
-                  <FiInfo className="w-4 h-4 text-gray-500" />
-                  <span className="capitalize">{enrichmentStatus || 'pending'}</span>
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-500 uppercase tracking-wide text-xs mb-1">Recurring</p>
-                <p>{rawEvent?.is_recurring ? 'Yes' : 'No'}</p>
-              </div>
             </div>
           </div>
 
