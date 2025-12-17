@@ -1005,16 +1005,22 @@ const MeetingDetails = ({ meeting }) => {
             </div>
             <ul className="space-y-2 text-gray-700 text-sm">
               {attendees.length > 0 ? (
-                attendees.map((attendee) => (
-                  <li key={attendee} className="flex items-start gap-2">
-                    <span className="mt-1.5 text-purple-600">•</span>
-                    <span>{attendee}</span>
-                  </li>
-                ))
+                attendees.map((attendee) => {
+                  // Format status text (needsAction -> needs action)
+                  let formattedAttendee = String(attendee);
+                  formattedAttendee = formattedAttendee.replace(/\(needsAction\)/gi, '(needs action)');
+                  
+                  return (
+                    <li key={attendee} className="flex items-center gap-2">
+                      <span className="text-purple-600 flex-shrink-0">•</span>
+                      <span className="flex-1">{formattedAttendee}</span>
+                    </li>
+                  );
+                })
               ) : (
-                <li className="flex items-start gap-2 text-gray-500">
-                  <span className="mt-1.5 text-purple-600">•</span>
-                  <span>Just you</span>
+                <li className="flex items-center gap-2 text-gray-500">
+                  <span className="text-purple-600 flex-shrink-0">•</span>
+                  <span className="flex-1">Just you</span>
                 </li>
               )}
             </ul>

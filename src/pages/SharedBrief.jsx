@@ -54,6 +54,25 @@ const formatDateTime = (date) => {
   });
 };
 
+// Helper to calculate duration
+const calculateDuration = (start, end) => {
+  if (!start || !end) return 'N/A';
+  try {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const diffMs = endDate - startDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) {
+      return `${diffMins} min`;
+    }
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return mins > 0 ? `${hours}h ${mins}min` : `${hours}h`;
+  } catch (e) {
+    return 'N/A';
+  }
+};
+
 const SharedBrief = () => {
   const { token } = useParams();
   const [brief, setBrief] = useState(null);
@@ -72,6 +91,13 @@ const SharedBrief = () => {
 
       if (result.success) {
         setBrief(result.data);
+        // Debug: Log location data
+        console.log('📋 Shared Brief Data:', {
+          location: result.data?.location,
+          event: result.data?.event,
+          start: result.data?.start,
+          end: result.data?.end,
+        });
       } else {
         setError(result.error || 'Failed to load shared brief');
       }
@@ -270,11 +296,11 @@ const SharedBrief = () => {
             <h2 className="text-3xl font-bold text-gray-900 mb-4">{brief?.event || 'Untitled Meeting'}</h2>
           </div>
 
-          {/* Meeting Overview */}
+          {/* Meeting Overview - Match MeetingDetails format */}
           <div className="bg-white border border-gray-100 rounded-2xl p-6">
             <div className="flex items-center gap-2 mb-4">
               <FiCalendar className="w-5 h-5 text-primary" />
-              <h3 className="text-lg font-semibold text-gray-900">Meeting Details</h3>
+              <h2 className="text-lg font-semibold text-gray-900">Meeting overview</h2>
             </div>
             <div className="grid sm:grid-cols-2 gap-4 text-sm text-gray-700">
               <div>
@@ -285,16 +311,109 @@ const SharedBrief = () => {
                 <p className="text-gray-500 uppercase tracking-wide text-xs mb-1">End</p>
                 <p>{formatDateTime(brief?.end)}</p>
               </div>
-              {brief?.location && brief.location !== 'No Location' && (
+              <div>
+                <p className="text-gray-500 uppercase tracking-wide text-xs mb-1">Duration</p>
+                <p>{calculateDuration(brief?.start, brief?.end)}</p>
+              </div>
                 <div>
                   <p className="text-gray-500 uppercase tracking-wide text-xs mb-1">Location</p>
                   <p className="flex items-center gap-2">
                     <FiMapPin className="w-4 h-4 text-gray-500" />
-                    <span>{brief.location}</span>
+                  <span>
+                    {(() => {
+                      // Check location from brief data
+                      const loc = brief?.location;
+                      if (!loc || loc === 'No Location' || loc === 'No location') {
+                        return 'No location specified';
+                      }
+                      if (typeof loc !== 'string') {
+                        return 'No location specified';
+                      }
+                      const trimmed = loc.trim();
+                      
+                      // Parse Zoom link, password, and email (matching Dashboard format)
+                      const zoomMatch = trimmed.match(/https?:\/\/[^\s]+zoom[^\s]*/i);
+                      if (zoomMatch) {
+                        let zoomUrl = zoomMatch[0];
+                        // Clean up URL - remove trailing ?. or ? or other query params that are malformed
+                        zoomUrl = zoomUrl.replace(/[?.]+$/, '').replace(/\?$/, '');
+                        
+                        // Extract password if present
+                        const remainingText = trimmed.substring(zoomMatch.index + zoomMatch[0].length);
+                        const pwdMatch = remainingText.match(/pwd=([^\s\/]+)/i) || trimmed.match(/pwd=([^\s\/]+)/i);
+                        const password = pwdMatch ? pwdMatch[1] : null;
+                        
+                        // Extract email if present
+                        const emailMatch = trimmed.match(/[\/\s]+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+                        const email = emailMatch ? emailMatch[1] : null;
+                        
+                        // Return formatted string (matching MeetingDetails simple format)
+                        let result = zoomUrl;
+                        if (password) {
+                          result += ` (Password: ${password})`;
+                        }
+                        if (email) {
+                          result += ` - ${email}`;
+                        }
+                        return result;
+                      }
+                      
+                      // Not a Zoom link, return as-is
+                      return trimmed;
+                    })()}
+                  </span>
                   </p>
                 </div>
-              )}
             </div>
+          </div>
+
+          {/* Attendees Section - Match MeetingDetails format */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <FiUsers className="w-5 h-5 text-purple-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Attendees</h2>
+            </div>
+            <ul className="space-y-2 text-gray-700 text-sm">
+              {(() => {
+                // Extract attendees from brief data
+                const attendeesList = brief?.attendees || [];
+                let attendees = [];
+                
+                if (Array.isArray(attendeesList)) {
+                  attendees = attendeesList.map(att => {
+                    if (typeof att === 'string') return att;
+                    if (typeof att === 'object' && att.email) return att.email;
+                    if (typeof att === 'object' && att.name) return att.name;
+                    return String(att);
+                  }).filter(Boolean);
+                } else if (typeof attendeesList === 'string') {
+                  // Handle string format (comma-separated or single)
+                  attendees = attendeesList.split(',').map(a => a.trim()).filter(Boolean);
+                }
+                
+                if (attendees.length > 0) {
+                  return attendees.map((attendee, idx) => {
+                    // Format status text (needsAction -> needs action)
+                    let formattedAttendee = String(attendee);
+                    formattedAttendee = formattedAttendee.replace(/\(needsAction\)/gi, '(needs action)');
+                    
+                    return (
+                      <li key={idx} className="flex items-center gap-2">
+                        <span className="text-purple-600 flex-shrink-0">•</span>
+                        <span className="flex-1">{formattedAttendee}</span>
+                      </li>
+                    );
+                  });
+                } else {
+                  return (
+                    <li className="flex items-center gap-2 text-gray-500">
+                      <span className="text-purple-600 flex-shrink-0">•</span>
+                      <span className="flex-1">Just you</span>
+                    </li>
+                  );
+                }
+              })()}
+            </ul>
           </div>
 
           {/* Description */}
@@ -302,7 +421,7 @@ const SharedBrief = () => {
             <div className="bg-white border border-gray-100 rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <FiInfo className="w-5 h-5 text-primary" />
-                <h3 className="text-lg font-semibold text-gray-900">Agenda / Description</h3>
+                <h2 className="text-lg font-semibold text-gray-900">Agenda / Description</h2>
               </div>
               <p className="text-sm text-gray-700 whitespace-pre-line">{brief.description}</p>
             </div>
@@ -554,12 +673,12 @@ const SharedBrief = () => {
 
             return (
               <div key={`interesting-${index}`} className="bg-white border border-gray-100 rounded-2xl p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4">
                   <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FBBF24' }}>
                     <FiTrendingUp className="w-5 h-5 text-gray-900" />
-                  </div>
+              </div>
                   <h4 className="text-sm font-bold text-gray-900">Interesting Fact</h4>
-                </div>
+            </div>
                 <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
                   {briefingMatch.profile.interesting_fact}
                 </p>
@@ -571,7 +690,7 @@ const SharedBrief = () => {
           {recentLinkedInPost && (
             <>
               <div className="bg-white border-t border-gray-200"></div>
-              <div className="bg-white border border-gray-100 rounded-2xl p-6">
+            <div className="bg-white border border-gray-100 rounded-2xl p-6">
                 <div className="flex flex-col items-center mb-5">
                   <img src="https://d1udkp95fdo7mt.cloudfront.net/images/image_li.png" alt="LinkedIn" className="w-8 h-8 mb-2" />
                   <h2 className="text-sm font-semibold text-gray-900">Recent LinkedIn Post</h2>

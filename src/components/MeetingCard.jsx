@@ -50,9 +50,62 @@ const MeetingCard = ({ meeting, isSelected, onClick }) => {
       </div>
 
       {/* Platform */}
-      <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
-        <FiMapPin className="w-4 h-4" />
-        <span>{meeting.platform || meeting.rawEvent?.location || 'No location specified'}</span>
+      <div className="flex items-start gap-2 text-sm text-neutral-600 mb-3">
+        <FiMapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <div className="flex-1">
+          {(() => {
+            const loc = meeting.platform || meeting.rawEvent?.location;
+            if (!loc) return <span>No location specified</span>;
+            if (typeof loc !== 'string') return <span>No location specified</span>;
+            const trimmed = loc.trim();
+            if (!trimmed || trimmed === 'No Location' || trimmed === 'No location') return <span>No location specified</span>;
+            
+            // Parse Zoom link, password, and email
+            const zoomMatch = trimmed.match(/https?:\/\/[^\s]+zoom[^\s]*/i);
+            if (zoomMatch) {
+              let zoomUrl = zoomMatch[0];
+              // Clean up URL - remove trailing ?. or ? or other query params that are malformed
+              zoomUrl = zoomUrl.replace(/[?.]+$/, '').replace(/\?$/, '');
+              
+              // Extract password if present
+              const remainingText = trimmed.substring(zoomMatch.index + zoomMatch[0].length);
+              const pwdMatch = remainingText.match(/pwd=([^\s\/]+)/i) || trimmed.match(/pwd=([^\s\/]+)/i);
+              const password = pwdMatch ? pwdMatch[1] : null;
+              
+              // Extract email if present
+              const emailMatch = trimmed.match(/[\/\s]+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+              const email = emailMatch ? emailMatch[1] : null;
+              
+              return (
+                <div className="space-y-1">
+                  <div>
+                    <a 
+                      href={zoomUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-all"
+                    >
+                      {zoomUrl}
+                    </a>
+                  </div>
+                  {password && (
+                    <div className="text-xs text-gray-500">
+                      Password: {password}
+                    </div>
+                  )}
+                  {email && (
+                    <div className="text-xs text-gray-500">
+                      {email}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+            
+            // Not a Zoom link, return as-is
+            return <span className="break-all">{trimmed}</span>;
+          })()}
+        </div>
       </div>
 
       {/* Attendees */}
