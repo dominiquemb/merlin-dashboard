@@ -83,7 +83,7 @@ const Onboarding = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome to Merlin!</h1>
           <p className="text-gray-600">
-            Let's set up your preferences and configure your Ideal Customer Profile criteria
+            Let's set up your preferences for your meetings
           </p>
         </div>
 

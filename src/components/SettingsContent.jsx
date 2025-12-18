@@ -7,6 +7,7 @@ import {
   FiCreditCard,
   FiX,
   FiSend,
+  FiClock,
 } from 'react-icons/fi';
 import CreditsBadge from './CreditsBadge';
 import AddSettingsModal from './AddSettingsModal';
@@ -49,6 +50,7 @@ const SettingsContent = ({
   const [crmEmailMessage, setCrmEmailMessage] = useState('');
   const [isSendingCrmEmail, setIsSendingCrmEmail] = useState(false);
   const [crmEmailSent, setCrmEmailSent] = useState(false);
+  const [briefTiming, setBriefTiming] = useState('30 minutes before meeting');
 
   // Custom insights questions organized by category
   const [selectedQuestions, setSelectedQuestions] = useState({
@@ -200,14 +202,15 @@ const SettingsContent = ({
     handleOAuthReturn();
   }, []);
 
-  // Load custom insights questions from backend
+  // Load custom insights questions and brief_timing from backend
   useEffect(() => {
-    const loadQuestions = async () => {
+    const loadPreferences = async () => {
       setIsLoading(true);
       try {
         const token = await getAuthToken();
         const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
         
+        // Load questions
         const questionsResponse = await fetch(`${apiUrl}/preferences/questions`, {
           method: 'GET',
           headers: {
@@ -238,14 +241,29 @@ const SettingsContent = ({
             console.log('Loaded questions:', questionsByCategory);
           }
         }
+
+        // Load brief_timing
+        const timingResponse = await fetch(`${apiUrl}/preferences/brief-timing`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (timingResponse.ok) {
+          const timingData = await timingResponse.json();
+          if (timingData.success && timingData.brief_timing) {
+            setBriefTiming(timingData.brief_timing);
+          }
+        }
       } catch (error) {
-        console.error('Error loading questions:', error);
+        console.error('Error loading preferences:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadQuestions();
+    loadPreferences();
   }, []);
 
   // Save custom insights questions to backend
@@ -290,7 +308,19 @@ const SettingsContent = ({
 
       const questionsResult = await questionsResponse.json();
       
-      if (questionsResult.success) {
+      // Save brief_timing
+      const timingResponse = await fetch(`${apiUrl}/preferences/brief-timing`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ brief_timing: briefTiming }),
+      });
+
+      const timingResult = await timingResponse.json();
+      
+      if (questionsResult.success && timingResult.success) {
         setSaveMessage('✅ Settings saved successfully!');
         setTimeout(() => {
           setSaveMessage('');
@@ -301,7 +331,8 @@ const SettingsContent = ({
           onSaveComplete();
         }
       } else {
-        setSaveMessage(`❌ ${questionsResult.detail || 'Failed to save settings'}`);
+        const errorMsg = questionsResult.detail || timingResult.detail || 'Failed to save settings';
+        setSaveMessage(`❌ ${errorMsg}`);
       }
       
     } catch (error) {
@@ -350,8 +381,48 @@ const SettingsContent = ({
     );
   }
 
+  const briefTimingOptions = [
+    '30 minutes before meeting',
+    '1 hour before meeting',
+    '6 hours before meeting',
+    '12 hours before meeting',
+    '1 day before meeting',
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Brief Timing Section */}
+      <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <FiClock className="w-5 h-5 text-purple-600" />
+          <h3 className="font-semibold text-gray-900">When would you like to receive your research briefs?</h3>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">Select when you'd like to receive your meeting briefs</p>
+
+        <div className="space-y-2">
+          {briefTimingOptions.map((option) => (
+            <label
+              key={option}
+              className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition ${
+                briefTiming === option
+                  ? 'border-primary bg-blue-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <input
+                type="radio"
+                name="briefTiming"
+                value={option}
+                checked={briefTiming === option}
+                onChange={(e) => setBriefTiming(e.target.value)}
+                className="w-4 h-4 text-primary border-gray-300 focus:ring-primary"
+              />
+              <span className="text-sm text-gray-700">{option}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
       {/* Section 1: Send my insights to + Custom Insights */}
       <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
         {/* Send my insights to */}
