@@ -777,47 +777,39 @@ const SharedBrief = () => {
                   </h3>
                 </div>
                 
-                {/* Key Information Grid */}
+                {/* Key Information Grid - Always show all 4 columns */}
                 <div className="grid grid-cols-4 gap-4 mb-6">
-                  {foundedYear && (
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/calendar_fill.png" alt="Founded" className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs text-gray-900 mb-0.5">Founded</p>
-                      <p className="text-sm font-medium text-gray-500">{foundedYear}</p>
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                      <img src="https://d1udkp95fdo7mt.cloudfront.net/images/calendar_fill.png" alt="Founded" className="w-5 h-5" />
                     </div>
-                  )}
+                    <p className="text-xs text-gray-900 mb-0.5">Founded</p>
+                    <p className="text-sm font-medium text-gray-500">{foundedYear || 'N/A'}</p>
+                  </div>
                   
-                  {headquartersStr && (
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/location_fill.png" alt="Headquarters" className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs text-gray-900 mb-0.5">Headquarters</p>
-                      <p className="text-sm font-medium text-gray-500">{headquartersStr}</p>
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                      <img src="https://d1udkp95fdo7mt.cloudfront.net/images/location_fill.png" alt="Headquarters" className="w-5 h-5" />
                     </div>
-                  )}
+                    <p className="text-xs text-gray-900 mb-0.5">Headquarters</p>
+                    <p className="text-sm font-medium text-gray-500">{headquartersStr || 'N/A'}</p>
+                  </div>
                   
-                  {employeeCount && (
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/group_3_fill.png" alt="Employees" className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs text-gray-900 mb-0.5">No. of Employees</p>
-                      <p className="text-sm font-medium text-gray-500">{employeeCount}</p>
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                      <img src="https://d1udkp95fdo7mt.cloudfront.net/images/group_3_fill.png" alt="Employees" className="w-5 h-5" />
                     </div>
-                  )}
+                    <p className="text-xs text-gray-900 mb-0.5">No. of Employees</p>
+                    <p className="text-sm font-medium text-gray-500">{employeeCount || 'N/A'}</p>
+                  </div>
                   
-                  {industry && (
-                    <div className="flex flex-col items-center text-center">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
-                        <img src="https://d1udkp95fdo7mt.cloudfront.net/images/world_2_fill.png" alt="Industry" className="w-5 h-5" />
-                      </div>
-                      <p className="text-xs text-gray-900 mb-0.5">Industry</p>
-                      <p className="text-sm font-medium text-gray-500">{industry}</p>
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mb-2" style={{ backgroundColor: '#FBBF24' }}>
+                      <img src="https://d1udkp95fdo7mt.cloudfront.net/images/world_2_fill.png" alt="Industry" className="w-5 h-5" />
                     </div>
-                  )}
+                    <p className="text-xs text-gray-900 mb-0.5">Industry</p>
+                    <p className="text-sm font-medium text-gray-500">{industry || 'N/A'}</p>
+                  </div>
                 </div>
                 
                 {/* Description */}
