@@ -1046,7 +1046,10 @@ const MeetingDetails = ({ meeting }) => {
                 <FiInfo className="w-5 h-5 text-primary" />
                 <h2 className="text-lg font-semibold text-gray-900">Agenda / Description</h2>
               </div>
-              <p className="text-sm text-gray-700 whitespace-pre-line">{description}</p>
+              <div 
+                className="text-sm text-gray-700 [&_p]:mb-2 [&_b]:font-semibold [&_br]:block [&_*]:leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: description }}
+              />
             </div>
           )}
 
