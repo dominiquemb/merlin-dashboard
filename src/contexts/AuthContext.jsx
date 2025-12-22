@@ -100,6 +100,38 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
       });
+      if (error) {
+        // Check if the error is due to account being created via OAuth
+        if (error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed')) {
+          // Try to get user info to check if account exists
+          const { data: userData } = await supabase.auth.admin?.getUserByEmail(email) || { data: null };
+          if (!userData) {
+            // Check if user exists via OAuth
+            return { 
+              data: null, 
+              error: 'Invalid login credentials. If you signed up with Google or Microsoft, please use "Continue with Google" or "Continue with Microsoft" to sign in.' 
+            };
+          }
+        }
+        throw error;
+      }
+      return { data, error: null };
+    } catch (error) {
+      // Provide more helpful error messages
+      let errorMessage = error.message;
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = 'Invalid login credentials. If you signed up with Google or Microsoft, please use the OAuth buttons to sign in. Otherwise, please check your email and password, or use "Forgot password?" to reset it.';
+      }
+      return { data: null, error: errorMessage };
+    }
+  };
+
+  // Reset password
+  const resetPassword = async (email) => {
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
@@ -173,6 +205,7 @@ export const AuthProvider = ({ children }) => {
     signOut,
     signInWithGoogle,
     signInWithMicrosoft,
+    resetPassword,
   };
 
   return (

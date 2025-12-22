@@ -7,7 +7,9 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signInWithGoogle, signInWithMicrosoft, user } = useAuth();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const { signIn, signInWithGoogle, signInWithMicrosoft, resetPassword, user } = useAuth();
   const navigate = useNavigate();
 
   // Check for OAuth errors in URL
@@ -85,6 +87,59 @@ const Login = () => {
             </div>
           )}
 
+          {resetSent && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
+              Password reset email sent! Check your inbox and follow the instructions to reset your password.
+            </div>
+          )}
+
+          {showForgotPassword && !resetSent && (
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">Reset Password</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!email) {
+                      setError('Please enter your email address');
+                      return;
+                    }
+                    const { error } = await resetPassword(email);
+                    if (error) {
+                      setError(error);
+                    } else {
+                      setResetSent(true);
+                      setShowForgotPassword(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-accent"
+                >
+                  Send
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setResetSent(false);
+                  }}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -134,9 +189,13 @@ const Login = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-gold hover:text-accent">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(true)}
+                  className="font-medium text-gold hover:text-accent"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
             </div>
 
