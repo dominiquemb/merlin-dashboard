@@ -6,7 +6,12 @@ const supabase = createClient(
 );
 
 // Integration API URL for API key management
-const INTEGRATION_API_URL = process.env.REACT_APP_INTEGRATION_API_URL || (process.env.NODE_ENV === 'production' ? 'https://int.dev.usemerlin.io' : 'http://localhost:8000');
+// Remove trailing slash if present to avoid double slashes in URLs
+const getIntegrationApiUrl = () => {
+  const url = process.env.REACT_APP_INTEGRATION_API_URL || (process.env.NODE_ENV === 'production' ? 'https://int.dev.usemerlin.io' : 'http://localhost:8000');
+  return url.replace(/\/+$/, ''); // Remove trailing slashes
+};
+const INTEGRATION_API_URL = getIntegrationApiUrl();
 
 /**
  * Get auth token from Supabase session
@@ -81,12 +86,26 @@ export const listApiKeys = async () => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      // If no key exists, return empty array instead of error
-      if (response.status === 404 || errorData.message?.includes('no rows')) {
+      // If 404, return empty array (no key exists yet)
+      if (response.status === 404) {
         return [];
       }
-      throw new Error(errorData.message || 'Failed to fetch API key');
+      
+      // Try to parse error response
+      let errorMessage = 'Failed to fetch API key';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+        // Also check for "no rows" in message
+        if (errorData.message?.includes('no rows')) {
+          return [];
+        }
+      } catch (e) {
+        // If response isn't JSON, use status text
+        errorMessage = response.statusText || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();

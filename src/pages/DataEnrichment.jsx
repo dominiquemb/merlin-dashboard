@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import { FiMail, FiDownload, FiUpload, FiFileText, FiCode, FiCreditCard, FiInfo, FiKey, FiCopy, FiTrash2, FiPlus, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
-import { uploadCsvForEnrichment, getEnrichmentJobs, downloadEnrichedCsv } from '../lib/enrichmentApi';
+import { getEnrichmentJobs, downloadEnrichedCsv } from '../lib/enrichmentApi';
 import { generateApiKey, listApiKeys, toggleApiKey, deleteApiKey } from '../lib/apiKeysApi';
 import { uploadPersonCsv } from '../lib/bridgeApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -64,8 +64,12 @@ const DataEnrichment = () => {
   };
 
   const handleFileUpload = (e) => {
+    e.preventDefault(); // Prevent any default form submission behavior
+    e.stopPropagation(); // Stop event propagation
+    
     const file = e.target.files?.[0];
     if (file) {
+      // Only set the file in state - do NOT upload yet
       setUploadedFile(file);
       // Clear previous messages when new file is uploaded
       setEnrichmentSuccess(null);
