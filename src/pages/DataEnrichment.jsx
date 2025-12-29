@@ -870,32 +870,62 @@ const DataEnrichment = () => {
                 </div>
               </div>
 
-              {/* Create Enrichment Request */}
+              {/* Upload Person CSV */}
               <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">1. Create Enrichment Request</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">1. Upload Person CSV for Enrichment</h3>
                 <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm mb-3">
                   <span className="text-green-600 font-semibold">POST</span>{' '}
-                  <span className="text-gray-900">https://api.merlin.ai/v1/enrich</span>
+                  <span className="text-gray-900">https://merlin-bridge-api.onrender.com/v1/person/upload</span>
                 </div>
 
                 <div className="mb-3">
                   <p className="text-xs font-medium text-gray-700 mb-2">Headers</p>
                   <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-1">
                     <div>
-                      <span className="text-accent">Authorization:</span> Bearer YOUR_API_KEY
+                      <span className="text-accent">X-API-Key:</span> YOUR_API_KEY
                     </div>
                     <div>
-                      <span className="text-accent">Content-Type:</span> application/json
+                      <span className="text-accent">Content-Type:</span> multipart/form-data
                     </div>
                   </div>
                 </div>
 
                 <div className="mb-3">
-                  <p className="text-xs font-medium text-gray-700 mb-2">Request Body</p>
+                  <p className="text-xs font-medium text-gray-700 mb-2">Form Data</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-2">
+                    <div>
+                      <span className="text-accent">file_upload:</span> CSV file (required)
+                    </div>
+                    <div>
+                      <span className="text-accent">json:</span> Stringified JSON (required)
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">JSON Payload Structure</p>
                   <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
                     <pre className="whitespace-pre">{`{
-  "email": "john.doe@company.com",
-  "fields": ["person_name", "job_title", "company_name"]
+  "includes": {
+    "summary": true,
+    "skills": true,
+    "experience": true,
+    "positions": true,
+    "education": true,
+    "company_info": true,
+    "profile_avatar": true,
+    "location": true,
+    "recent_news": true,
+    "ci_personal": true,
+    "lp_personal": true,
+    "sm_accounts": true
+  },
+  "questions": [
+    {
+      "category": "brand",
+      "question": "What is their brand positioning?"
+    }
+  ]
 }`}</pre>
                   </div>
                 </div>
@@ -904,10 +934,13 @@ const DataEnrichment = () => {
                   <p className="text-xs font-medium text-gray-700 mb-2">Response</p>
                   <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
                     <pre className="whitespace-pre">{`{
-  "status": "pending",
-  "request_id": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "Enrichment request queued successfully. Processing will begin via scheduled flows.",
-  "credits_charged": 1
+  "error": false,
+  "message": "File uploaded successfully",
+  "data": {
+    "job_id": "550e8400-e29b-41d4-a716-446655440000",
+    "total_records": 10,
+    "credits_required": 30
+  }
 }`}</pre>
                   </div>
                 </div>
