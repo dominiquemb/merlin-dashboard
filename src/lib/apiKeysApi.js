@@ -5,7 +5,8 @@ const supabase = createClient(
   process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
-const API_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+// Integration API URL for API key management
+const INTEGRATION_API_URL = process.env.REACT_APP_INTEGRATION_API_URL || (process.env.NODE_ENV === 'production' ? 'https://int.dev.usemerlin.io' : 'http://localhost:8000');
 
 /**
  * Get auth token from Supabase session
@@ -17,25 +18,43 @@ const getAuthToken = async () => {
 
 /**
  * Generate a new API key
+ * Uses POST /v1/key endpoint from merlin-integration API
  */
 export const generateApiKey = async (name) => {
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/api-keys/generate`, {
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+
+    // Integration API expects empty body for POST /v1/key
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/key`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({}), // Empty body as per API spec
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to generate API key');
+      throw new Error(errorData.message || 'Failed to generate API key');
     }
 
-    return await response.json();
+    const result = await response.json();
+    
+    // Transform response to match expected format
+    // Integration API returns: { error: false, message: "General.OK_REGISTER", data: { api_key: "...", is_active: true } }
+    if (result.data && result.data.api_key) {
+      return {
+        api_key: result.data.api_key, // Full API key for display
+        id: 'current',
+        name: name || 'API Key', // Name is not stored in integration API, use provided name
+      };
+    }
+    
+    throw new Error('Invalid response format from API');
   } catch (error) {
     console.error('Error generating API key:', error);
     throw error;
@@ -43,12 +62,17 @@ export const generateApiKey = async (name) => {
 };
 
 /**
- * Get list of API keys
+ * Get current API key
+ * Uses GET /v1/key endpoint from merlin-integration API
  */
 export const listApiKeys = async () => {
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/api-keys/list`, {
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/key`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -57,10 +81,34 @@ export const listApiKeys = async () => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch API keys');
+      const errorData = await response.json();
+      // If no key exists, return empty array instead of error
+      if (response.status === 404 || errorData.message?.includes('no rows')) {
+        return [];
+      }
+      throw new Error(errorData.message || 'Failed to fetch API key');
     }
 
-    return await response.json();
+    const result = await response.json();
+    
+    // Transform response to match expected format
+    // Integration API returns: { error: false, message: "General.OK_REGISTER", data: { user_id: "...", api_key: "...", is_active: true } }
+    if (result.data && result.data.api_key) {
+      const apiKey = result.data.api_key;
+      const keyPrefix = apiKey.substring(0, 10) + '...';
+      return [{
+        id: 'current',
+        name: 'API Key', // Integration API doesn't store names
+        key_prefix: keyPrefix,
+        key: keyPrefix, // For display purposes
+        fullKey: apiKey, // Store full key for use
+        is_active: result.data.is_active !== false,
+        created_at: new Date().toISOString(), // Integration API doesn't return created_at
+        last_used_at: null, // Integration API doesn't return last_used_at
+      }];
+    }
+    
+    return [];
   } catch (error) {
     console.error('Error fetching API keys:', error);
     throw error;
@@ -69,25 +117,31 @@ export const listApiKeys = async () => {
 
 /**
  * Toggle API key active status
+ * Uses PATCH /v1/key/status endpoint from merlin-integration API
  */
 export const toggleApiKey = async (keyId, isActive) => {
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/api-keys/${keyId}/toggle`, {
-      method: 'PUT',
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+
+    // Integration API toggles the status, so we just call it
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/key/status`, {
+      method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ is_active: isActive }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to toggle API key');
+      throw new Error(errorData.message || 'Failed to toggle API key status');
     }
 
-    return await response.json();
+    const result = await response.json();
+    return result;
   } catch (error) {
     console.error('Error toggling API key:', error);
     throw error;
@@ -95,13 +149,20 @@ export const toggleApiKey = async (keyId, isActive) => {
 };
 
 /**
- * Delete an API key
+ * Delete/Refresh an API key
+ * Uses PATCH /v1/key/refresh endpoint from merlin-integration API
+ * Note: Integration API doesn't have delete, only refresh (which invalidates the old key)
  */
 export const deleteApiKey = async (keyId) => {
   try {
     const token = await getAuthToken();
-    const response = await fetch(`${API_URL}/api-keys/${keyId}`, {
-      method: 'DELETE',
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+
+    // Integration API doesn't have delete, use refresh to invalidate
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/key/refresh`, {
+      method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -110,12 +171,13 @@ export const deleteApiKey = async (keyId) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || 'Failed to delete API key');
+      throw new Error(errorData.message || 'Failed to refresh API key');
     }
 
-    return await response.json();
+    const result = await response.json();
+    return result;
   } catch (error) {
-    console.error('Error deleting API key:', error);
+    console.error('Error refreshing API key:', error);
     throw error;
   }
 };

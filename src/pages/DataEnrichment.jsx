@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import { FiMail, FiDownload, FiUpload, FiFileText, FiCode, FiCreditCard, FiInfo, FiKey, FiCopy, FiTrash2, FiPlus, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { uploadCsvForEnrichment, getEnrichmentJobs, downloadEnrichedCsv } from '../lib/enrichmentApi';
 import { generateApiKey, listApiKeys, toggleApiKey, deleteApiKey } from '../lib/apiKeysApi';
+import { uploadPersonCsv } from '../lib/bridgeApi';
 import { useAuth } from '../contexts/AuthContext';
 
 const DataEnrichment = () => {
@@ -82,13 +83,51 @@ const DataEnrichment = () => {
     setEnrichmentError(null);
 
     try {
-      const result = await uploadCsvForEnrichment(
+      // Get the first active API key (bridge API requires X-API-Key header)
+      const activeApiKey = apiKeys.find(key => key.isActive);
+      if (!activeApiKey) {
+        setEnrichmentError('No active API key found. Please go to the "API Integration" tab to generate an API key first.');
+        setIsEnriching(false);
+        setTimeout(() => setEnrichmentError(null), 10000); // Show for 10 seconds so user can read it
+        return;
+      }
+
+      // Use the full key if available, otherwise use the key prefix
+      const apiKey = activeApiKey.fullKey || activeApiKey.key;
+
+      // Map selected fields to bridge API PersonalIncludes format
+      const includes = {};
+      
+      // Map person fields to PersonalIncludes
+      if (selectedFields.includes('person_name') || selectedFields.includes('email_address')) {
+        includes.summary = true;
+      }
+      if (selectedFields.includes('skills')) {
+        includes.skills = true;
+      }
+      if (selectedFields.includes('employment_history') || selectedFields.includes('job_title')) {
+        includes.experience = true;
+        includes.positions = true;
+      }
+      if (selectedFields.includes('education')) {
+        includes.education = true;
+      }
+      if (selectedFields.includes('current_company') || selectedFields.includes('company_name')) {
+        includes.company_info = true;
+      }
+      if (selectedFields.includes('linkedin_url')) {
+        includes.profile_avatar = true;
+      }
+
+      // Call bridge API person upload endpoint
+      const result = await uploadPersonCsv(
         uploadedFile,
-        selectedFields,
-        email
+        includes,
+        [], // questions array - empty for now
+        apiKey
       );
 
-      setEnrichmentSuccess(result.message);
+      setEnrichmentSuccess('Successfully uploaded person CSV file. Processing will begin shortly.');
 
       // Send notification to insights@usemerlin.io via formsubmit.co
       try {
@@ -156,6 +195,8 @@ const DataEnrichment = () => {
     // Load recent jobs when CSV tab is active
     if (activeTab === 'csv') {
       fetchRecentJobs();
+      // Also load API keys for the upload form
+      fetchApiKeys();
     }
     // Load API keys when API tab is active
     if (activeTab === 'api') {
@@ -186,9 +227,9 @@ const DataEnrichment = () => {
       const transformedKeys = keys.map(key => ({
         id: key.id,
         name: key.name,
-        key: key.key_prefix,
-        fullKey: key.key_prefix, // Only the prefix is available after creation
-        created: new Date(key.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        key: key.key_prefix || key.key, // Use prefix for display
+        fullKey: key.fullKey || key.key, // Store full key for API calls
+        created: key.created_at ? new Date(key.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Unknown',
         lastUsed: key.last_used_at ? formatTimeAgo(new Date(key.last_used_at)) : 'Never',
         isActive: key.is_active,
       }));
