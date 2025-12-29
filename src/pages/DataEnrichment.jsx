@@ -95,6 +95,48 @@ const DataEnrichment = () => {
       // Use the full key if available, otherwise use the key prefix
       const apiKey = activeApiKey.fullKey || activeApiKey.key;
 
+      // Get auth token for fetching preferences
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.REACT_APP_SUPABASE_URL,
+        process.env.REACT_APP_SUPABASE_ANON_KEY
+      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        setEnrichmentError('No authentication token found. Please log in again.');
+        setIsEnriching(false);
+        return;
+      }
+
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+
+      // Fetch custom questions from ICP settings
+      let customQuestions = [];
+      try {
+        const questionsResponse = await fetch(`${apiUrl}/preferences/questions`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (questionsResponse.ok) {
+          const questionsData = await questionsResponse.json();
+          if (questionsData.success && questionsData.questions && questionsData.questions.length > 0) {
+            // Transform to bridge API format: array of {category, question}
+            customQuestions = questionsData.questions.map(q => ({
+              category: q.category || 'other',
+              question: q.question
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching custom questions:', error);
+        // Continue without questions if fetch fails
+      }
+
       // Map selected fields to bridge API PersonalIncludes format
       const includes = {};
       
@@ -119,11 +161,11 @@ const DataEnrichment = () => {
         includes.profile_avatar = true;
       }
 
-      // Call bridge API person upload endpoint
+      // Call bridge API person upload endpoint with custom questions
       const result = await uploadPersonCsv(
         uploadedFile,
         includes,
-        [], // questions array - empty for now
+        customQuestions, // Include custom questions from ICP settings
         apiKey
       );
 
@@ -378,27 +420,6 @@ const DataEnrichment = () => {
 
         {activeTab === 'csv' && (
           <>
-            {/* Active Jobs Banner */}
-            {recentJobs.filter(job => ['pending', 'processing'].includes(job.status)).length > 0 && (
-              <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-300 rounded-xl flex items-start gap-3">
-                <div className="flex-shrink-0">
-                  <div className="relative">
-                    <FiUpload className="w-6 h-6 text-blue-600" />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-blue-900 font-semibold text-lg">
-                    {recentJobs.filter(job => ['pending', 'processing'].includes(job.status)).length} Enrichment Job(s) In Progress
-                  </p>
-                  <p className="text-sm text-blue-700 mt-1">
-                    Your data is being enriched.
-                    Your enriched CSV will be emailed to you once processing is complete.
-                  </p>
-                </div>
-              </div>
-            )}
-
             {/* Success Message */}
             {enrichmentSuccess && (
               <div className="mb-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl flex items-start gap-3 shadow-sm">
@@ -462,11 +483,25 @@ const DataEnrichment = () => {
               <div className="mt-4 p-4 bg-accent-light border border-accent rounded-lg">
                 <div className="flex items-start gap-2">
                   <FiInfo className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-gray-900">
+                  <div className="flex-1 text-sm text-gray-900">
                     <span className="font-semibold">Required CSV format:</span>
                     <br />
-                    Your CSV must contain either an <span className="font-semibold text-primary">email</span> column or a{' '}
-                    <span className="font-semibold text-primary">linkedin_url</span> column (or both)
+                    Your CSV must contain the following columns (in order):{' '}
+                    <span className="font-semibold text-primary">record_id</span>,{' '}
+                    <span className="font-semibold text-primary">first_name</span>,{' '}
+                    <span className="font-semibold text-primary">last_name</span>,{' '}
+                    <span className="font-semibold text-primary">email</span>,{' '}
+                    <span className="font-semibold text-primary">social_url</span>
+                    <div className="mt-3">
+                      <a
+                        href="/example_person_upload.csv"
+                        download="example_person_upload.csv"
+                        className="inline-flex items-center gap-2 text-primary hover:text-accent font-medium underline"
+                      >
+                        <FiDownload className="w-4 h-4" />
+                        Download example CSV file
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
