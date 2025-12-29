@@ -484,14 +484,18 @@ const DataEnrichment = () => {
                 <div className="flex items-start gap-2">
                   <FiInfo className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
                   <div className="flex-1 text-sm text-gray-900">
-                    <span className="font-semibold">Required CSV format:</span>
+                    <span className="font-semibold">CSV format:</span>
                     <br />
-                    Your CSV must contain the following columns (in order):{' '}
-                    <span className="font-semibold text-primary">record_id</span>,{' '}
+                    All columns are optional. Supported columns (in order from left to right):{' '}
+                    <span className="font-semibold text-primary">record_id</span> (user-provided, can be any value you wish),{' '}
                     <span className="font-semibold text-primary">first_name</span>,{' '}
                     <span className="font-semibold text-primary">last_name</span>,{' '}
                     <span className="font-semibold text-primary">email</span>,{' '}
                     <span className="font-semibold text-primary">social_url</span>
+                    <br />
+                    <span className="text-gray-700 mt-2 block">
+                      The script processes columns from right to left, starting with the rightmost column.
+                    </span>
                     <div className="mt-3">
                       <a
                         href="/example_person_upload.csv"
