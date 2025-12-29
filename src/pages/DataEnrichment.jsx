@@ -98,6 +98,16 @@ const DataEnrichment = () => {
 
       // Use the full key if available, otherwise use the key prefix
       const apiKey = activeApiKey.fullKey || activeApiKey.key;
+      
+      // Log which API key is being used (masked for security)
+      const maskedKey = apiKey.length > 10 ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}` : '***';
+      console.log('🔑 Selected API key:', maskedKey);
+      console.log('📋 API key details:', {
+        id: activeApiKey.id,
+        name: activeApiKey.name,
+        isActive: activeApiKey.isActive,
+        keyPrefix: maskedKey
+      });
 
       // Get auth token for fetching preferences
       const { createClient } = await import('@supabase/supabase-js');

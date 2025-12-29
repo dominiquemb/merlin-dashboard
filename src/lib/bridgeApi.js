@@ -2,7 +2,12 @@
  * Bridge API client for company and person uploads
  */
 
-const BRIDGE_API_URL = process.env.REACT_APP_BRIDGE_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-bridge-api.onrender.com' : 'http://localhost:8080');
+// Remove trailing slash if present to avoid double slashes in URLs
+const getBridgeApiUrl = () => {
+  const url = process.env.REACT_APP_BRIDGE_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-bridge-api.onrender.com' : 'http://localhost:8080');
+  return url.replace(/\/+$/, ''); // Remove trailing slashes
+};
+const BRIDGE_API_URL = getBridgeApiUrl();
 
 /**
  * Upload CSV file to bridge API for company enrichment
@@ -52,6 +57,11 @@ export const uploadPersonCsv = async (file, includes = {}, questions = [], apiKe
     if (!apiKey) {
       throw new Error('API key is required');
     }
+
+    // Log API key being used (masked for security)
+    const maskedKey = apiKey.length > 10 ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}` : '***';
+    console.log('🔑 Using API key for bridge API:', maskedKey);
+    console.log('📤 Uploading to:', `${BRIDGE_API_URL}/v1/person/upload`);
 
     const formData = new FormData();
     formData.append('file_upload', file);
