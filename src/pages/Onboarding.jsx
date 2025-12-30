@@ -66,11 +66,11 @@ const Onboarding = () => {
     }
   }, []);
 
-  // Handle save completion - redirect to dashboard
+  // Handle save completion - redirect to dashboard with completion param
   const handleSaveComplete = () => {
     setSaveMessage('✅ Onboarding completed! Redirecting to dashboard...');
     setTimeout(() => {
-      navigate('/dashboard');
+      navigate('/dashboard?onboarding_completed=true');
     }, 1500);
   };
 

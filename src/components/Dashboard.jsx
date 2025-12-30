@@ -52,6 +52,15 @@ const Dashboard = () => {
       return;
     }
     
+    // Skip onboarding check if user just completed onboarding (from redirect param)
+    if (urlParams.get('onboarding_completed') === 'true') {
+      console.log('User just completed onboarding, skipping check');
+      // Clean up URL parameter
+      window.history.replaceState({}, document.title, window.location.pathname);
+      hasCheckedOnboardingRef.current = true;
+      return;
+    }
+    
     hasCheckedOnboardingRef.current = true;
     
     const checkOnboardingStatus = async () => {
