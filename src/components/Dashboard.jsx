@@ -27,26 +27,35 @@ const Dashboard = () => {
   const hasCheckedOnboardingRef = useRef(false);
 
   // Check if user has completed onboarding (has ICP criteria set)
-  // Also check for calendar_connected parameter from OAuth redirect
+  // Check for calendar_connected parameter from backend OAuth callback - redirect immediately
+  useEffect(() => {
+    // Check URL parameters immediately, before any async operations
+    const urlParams = new URLSearchParams(window.location.search);
+    const calendarConnected = urlParams.get('calendar_connected');
+    
+    if (calendarConnected === 'true') {
+      console.log('User just connected calendar via backend OAuth, redirecting to onboarding');
+      // Clean up URL parameter and redirect immediately
+      window.history.replaceState({}, document.title, window.location.pathname);
+      navigate('/onboarding', { replace: true });
+      return;
+    }
+  }, [navigate]);
+  
+  // Check onboarding status and redirect if not completed
   useEffect(() => {
     if (!user?.email || hasCheckedOnboardingRef.current) return;
+    
+    // Skip if calendar_connected is in URL (handled by previous effect)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('calendar_connected') === 'true') {
+      return;
+    }
     
     hasCheckedOnboardingRef.current = true;
     
     const checkOnboardingStatus = async () => {
       try {
-        // Check if user just connected their calendar (from OAuth redirect)
-        const urlParams = new URLSearchParams(window.location.search);
-        const calendarConnected = urlParams.get('calendar_connected');
-        
-        if (calendarConnected === 'true') {
-          console.log('User just connected calendar, redirecting to onboarding');
-          // Clean up URL parameter
-          window.history.replaceState({}, document.title, window.location.pathname);
-          navigate('/onboarding');
-          return;
-        }
-        
         const token = await (async () => {
           const { createClient } = await import('@supabase/supabase-js');
           const supabase = createClient(
@@ -60,6 +69,8 @@ const Dashboard = () => {
         if (!token) return;
         
         const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+        
+        // Check onboarding status
         const response = await fetch(`${apiUrl}/icp/status`, {
           method: 'GET',
           headers: {
@@ -70,16 +81,23 @@ const Dashboard = () => {
         if (response.ok) {
           const data = await response.json();
           
-          // Always redirect to onboarding if user hasn't completed it (no ICP criteria)
-          if (!data.has_icp_criteria || !data.icp_criteria) {
-            console.log('User has not completed onboarding (no ICP criteria), redirecting to onboarding');
-            navigate('/onboarding');
+          // Redirect to onboarding if not completed
+          if (!data.onboarding_completed) {
+            console.log('User has not completed onboarding, redirecting to onboarding');
+            navigate('/onboarding', { replace: true });
             return;
           }
+        } else if (response.status === 401 || response.status === 404) {
+          // If auth fails or user not found, redirect to onboarding
+          console.log('User authentication failed or user not found, redirecting to onboarding');
+          navigate('/onboarding', { replace: true });
+          return;
         }
       } catch (error) {
         console.log('Error checking onboarding status:', error);
-        // Don't block user if check fails
+        // If check fails, redirect to onboarding to be safe
+        console.log('Onboarding check failed, redirecting to onboarding as fallback');
+        navigate('/onboarding', { replace: true });
       }
     };
     

@@ -7,12 +7,8 @@ const Signup = () => {
   const { signInWithGoogle, signInWithMicrosoft, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to dashboard if user is already logged in (including after OAuth)
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
+  // Don't auto-redirect - let Supabase OAuth redirectTo handle it
+  // If user is already logged in and manually navigated here, they can use the buttons
 
   const handleGoogleSignIn = async () => {
     setError('');
