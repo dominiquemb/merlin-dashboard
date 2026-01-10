@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import { FiMail, FiDownload, FiUpload, FiFileText, FiCode, FiCreditCard, FiInfo, FiKey, FiCopy, FiTrash2, FiPlus, FiX, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { getEnrichmentJobs, downloadEnrichedCsv } from '../lib/enrichmentApi';
-import { generateApiKey, listApiKeys, toggleApiKey, deleteApiKey } from '../lib/apiKeysApi';
+import { generateApiKey, listApiKeys, toggleApiKey, deleteApiKey, fetchLogs } from '../lib/apiKeysApi';
 import { uploadPersonCsv } from '../lib/bridgeApi';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -20,6 +20,8 @@ const DataEnrichment = () => {
   const [apiKeys, setApiKeys] = useState([]);
   const [isLoadingApiKeys, setIsLoadingApiKeys] = useState(false);
   const [newApiKey, setNewApiKey] = useState(null); // Store newly generated key temporarily
+  const [logs, setLogs] = useState([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
   // Pre-select some fields
   const [selectedFields, setSelectedFields] = useState([
@@ -258,6 +260,10 @@ const DataEnrichment = () => {
     if (activeTab === 'api') {
       fetchApiKeys();
     }
+    // Load usage logs when Past Uploads tab is active
+    if (activeTab === 'past-uploads') {
+      fetchUsageLogs();
+    }
   }, [activeTab]);
 
   // Auto-refresh jobs every 30 seconds if there are active jobs
@@ -294,6 +300,18 @@ const DataEnrichment = () => {
       console.error('Failed to fetch API keys:', error);
     } finally {
       setIsLoadingApiKeys(false);
+    }
+  };
+
+  const fetchUsageLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const result = await fetchLogs(1, 10);
+      setLogs(result.logs);
+    } catch (error) {
+      console.error('Failed to fetch logs:', error);
+    } finally {
+      setIsLoadingLogs(false);
     }
   };
 
@@ -418,6 +436,17 @@ const DataEnrichment = () => {
           >
             <FiUpload className="w-4 h-4" />
             CSV Upload
+          </button>
+          <button
+            onClick={() => setActiveTab('past-uploads')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+              activeTab === 'past-uploads'
+                ? 'bg-white border-2 border-gray-900 text-gray-900'
+                : 'bg-white border border-gray-300 text-gray-600 hover:border-gray-400'
+            }`}
+          >
+            <FiFileText className="w-4 h-4" />
+            Past Uploads
           </button>
           <button
             onClick={() => setActiveTab('api')}
@@ -1017,6 +1046,95 @@ const DataEnrichment = () => {
                   </p>
                 </div>
               </div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'past-uploads' && (
+          <>
+            {/* Usage Logs Section */}
+            <div className="bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FiFileText className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Past Uploads</h2>
+                    <p className="text-sm text-gray-600">View your recent API usage and upload history</p>
+                  </div>
+                </div>
+                <button
+                  onClick={fetchUsageLogs}
+                  disabled={isLoadingLogs}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
+                >
+                  <FiDownload className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+
+              {isLoadingLogs ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-2"></div>
+                    <p className="text-gray-500">Loading logs...</p>
+                  </div>
+                </div>
+              ) : logs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Request ID</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {logs.map((log, index) => (
+                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-4 px-4 text-sm text-gray-900">{log.type_of || 'N/A'}</td>
+                          <td className="py-4 px-4">
+                            <code className="text-sm font-mono text-gray-700">
+                              {log.req_id ? `${log.req_id.substring(0, 8)}...` : 'N/A'}
+                            </code>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                log.status === 'success'
+                                  ? 'bg-green-100 text-green-700'
+                                  : log.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              {log.status || 'unknown'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-600">
+                            {log.created_at ? new Date(log.created_at).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : 'N/A'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <FiFileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">No upload history yet</p>
+                  <p className="text-sm text-gray-400 mt-1">Your past uploads will appear here</p>
+                </div>
+              )}
             </div>
           </>
         )}

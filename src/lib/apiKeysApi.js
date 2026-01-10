@@ -168,9 +168,8 @@ export const toggleApiKey = async (keyId, isActive) => {
 };
 
 /**
- * Delete/Refresh an API key
- * Uses PATCH /v1/key/refresh endpoint from merlin-integration API
- * Note: Integration API doesn't have delete, only refresh (which invalidates the old key)
+ * Delete an API key
+ * Uses DELETE /v1/key endpoint from merlin-integration API
  */
 export const deleteApiKey = async (keyId) => {
   try {
@@ -179,9 +178,9 @@ export const deleteApiKey = async (keyId) => {
       throw new Error('No authentication token found. Please log in again.');
     }
 
-    // Integration API doesn't have delete, use refresh to invalidate
-    const response = await fetch(`${INTEGRATION_API_URL}/v1/key/refresh`, {
-      method: 'PATCH',
+    // Delete the API key using DELETE /v1/key
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/key`, {
+      method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -190,13 +189,60 @@ export const deleteApiKey = async (keyId) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to refresh API key');
+      throw new Error(errorData.message || 'Failed to delete API key');
     }
 
     const result = await response.json();
     return result;
   } catch (error) {
-    console.error('Error refreshing API key:', error);
+    console.error('Error deleting API key:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch usage logs
+ * Uses GET /v1/stats/logs endpoint from merlin-integration API
+ */
+export const fetchLogs = async (page = 1, limit = 10) => {
+  try {
+    const token = await getAuthToken();
+    if (!token) {
+      throw new Error('No authentication token found. Please log in again.');
+    }
+
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/stats/logs?${params.toString()}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to fetch logs');
+    }
+
+    const result = await response.json();
+
+    // Transform response to match expected format
+    // Integration API returns: { error: false, message: "General.OK_REGISTER", data: { info: [...], pages: N } }
+    if (result.data) {
+      return {
+        logs: result.data.info || [],
+        totalPages: result.data.pages || 0,
+      };
+    }
+
+    return { logs: [], totalPages: 0 };
+  } catch (error) {
+    console.error('Error fetching logs:', error);
     throw error;
   }
 };
