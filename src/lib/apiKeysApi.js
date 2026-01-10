@@ -8,7 +8,7 @@ const supabase = createClient(
 // Integration API URL for API key management
 // Remove trailing slash if present to avoid double slashes in URLs
 const getIntegrationApiUrl = () => {
-  const url = process.env.REACT_APP_INTEGRATION_API_URL || (process.env.NODE_ENV === 'production' ? 'https://int.dev.usemerlin.io' : 'http://localhost:8000');
+  const url = process.env.REACT_APP_INTEGRATION_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-core-api.onrender.com' : 'http://localhost:8000');
   return url.replace(/\/+$/, ''); // Remove trailing slashes
 };
 const INTEGRATION_API_URL = getIntegrationApiUrl();

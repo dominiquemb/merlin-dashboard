@@ -5,7 +5,7 @@
 // Integration API URL for uploads (same as API key management)
 // Remove trailing slash if present to avoid double slashes in URLs
 const getIntegrationApiUrl = () => {
-  const url = process.env.REACT_APP_INTEGRATION_API_URL || (process.env.NODE_ENV === 'production' ? 'https://int.dev.usemerlin.io' : 'http://localhost:8000');
+  const url = process.env.REACT_APP_INTEGRATION_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-core-api.onrender.com' : 'http://localhost:8000');
   return url.replace(/\/+$/, ''); // Remove trailing slashes
 };
 const INTEGRATION_API_URL = getIntegrationApiUrl();
@@ -53,15 +53,15 @@ export const uploadCompanyCsv = async (file, includes = {}, questions = [], apiK
 /**
  * Upload CSV file to bridge API for person enrichment
  */
-export const uploadPersonCsv = async (file, includes = {}, questions = [], apiKey) => {
+export const uploadPersonCsv = async (file, includes = {}, questions = [], token) => {
   try {
-    if (!apiKey) {
-      throw new Error('API key is required');
+    if (!token) {
+      throw new Error('Authentication token is required');
     }
 
     // Log API key being used (masked for security)
-    const maskedKey = apiKey.length > 10 ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}` : '***';
-    console.log('🔑 Using API key for integration API:', maskedKey);
+    const maskedToken = token.length > 10 ? `${token.substring(0, 10)}...${token.substring(token.length - 4)}` : '***';
+    console.log('🔑 Using Supabase token for integration API:', maskedToken);
     console.log('📤 Uploading to:', `${INTEGRATION_API_URL}/upload/person`);
 
     const formData = new FormData();
@@ -78,7 +78,7 @@ export const uploadPersonCsv = async (file, includes = {}, questions = [], apiKe
     const response = await fetch(`${INTEGRATION_API_URL}/upload/person`, {
       method: 'POST',
       headers: {
-        'X-API-Key': apiKey,
+        'Authorization': `Bearer ${token}`,
       },
       body: formData,
     });

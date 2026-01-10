@@ -25,6 +25,9 @@ const Dashboard = () => {
 
   const hasCheckedCalendarRef = useRef(false);
   const hasCheckedOnboardingRef = useRef(false);
+  const [onboardingCheckComplete, setOnboardingCheckComplete] = useState(false);
+  const [justCompletedOnboarding, setJustCompletedOnboarding] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   // Check if user has completed onboarding (has ICP criteria set)
   // Check for calendar_connected parameter from backend OAuth callback - redirect immediately
@@ -32,7 +35,7 @@ const Dashboard = () => {
     // Check URL parameters immediately, before any async operations
     const urlParams = new URLSearchParams(window.location.search);
     const calendarConnected = urlParams.get('calendar_connected');
-    
+
     if (calendarConnected === 'true') {
       console.log('User just connected calendar via backend OAuth, redirecting to onboarding');
       // Clean up URL parameter and redirect immediately
@@ -41,28 +44,31 @@ const Dashboard = () => {
       return;
     }
   }, [navigate]);
-  
+
   // Check onboarding status and redirect if not completed
   useEffect(() => {
     if (!user?.email || hasCheckedOnboardingRef.current) return;
-    
+
     // Skip if calendar_connected is in URL (handled by previous effect)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('calendar_connected') === 'true') {
       return;
     }
-    
+
     // Skip onboarding check if user just completed onboarding (from redirect param)
     if (urlParams.get('onboarding_completed') === 'true') {
       console.log('User just completed onboarding, skipping check');
       // Clean up URL parameter
       window.history.replaceState({}, document.title, window.location.pathname);
       hasCheckedOnboardingRef.current = true;
+      setJustCompletedOnboarding(true);
+      setOnboardingCompleted(true); // Mark onboarding as completed
+      setOnboardingCheckComplete(true);
       return;
     }
-    
+
     hasCheckedOnboardingRef.current = true;
-    
+
     const checkOnboardingStatus = async () => {
       try {
         const token = await (async () => {
@@ -74,11 +80,11 @@ const Dashboard = () => {
           const { data: { session } } = await supabase.auth.getSession();
           return session?.access_token || null;
         })();
-        
+
         if (!token) return;
-        
+
         const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
-        
+
         // Check onboarding status
         const response = await fetch(`${apiUrl}/icp/status`, {
           method: 'GET',
@@ -86,16 +92,22 @@ const Dashboard = () => {
             'Authorization': `Bearer ${token}`,
           },
         });
-        
+
         if (response.ok) {
           const data = await response.json();
-          
+
+          // Store onboarding completion status
+          setOnboardingCompleted(data.onboarding_completed || false);
+
           // Redirect to onboarding if not completed
           if (!data.onboarding_completed) {
             console.log('User has not completed onboarding, redirecting to onboarding');
             navigate('/onboarding', { replace: true });
             return;
           }
+
+          // Onboarding is complete
+          setOnboardingCheckComplete(true);
         } else if (response.status === 401 || response.status === 404) {
           // If auth fails or user not found, redirect to onboarding
           console.log('User authentication failed or user not found, redirecting to onboarding');
@@ -109,11 +121,17 @@ const Dashboard = () => {
         navigate('/onboarding', { replace: true });
       }
     };
-    
+
     checkOnboardingStatus();
   }, [user?.email, navigate]);
 
   useEffect(() => {
+    // Wait for onboarding check to complete before checking calendar
+    if (!onboardingCheckComplete) {
+      console.log('⏳ Waiting for onboarding check to complete...');
+      return;
+    }
+
     // Only check calendar connection once, when user is available
     if (!user?.email || hasCheckedCalendarRef.current) {
       // If user exists and calendar is already checked, just load meetings
@@ -122,29 +140,117 @@ const Dashboard = () => {
       }
       return;
     }
+
+    // IMPORTANT: Calendar connection is REQUIRED during signup/onboarding
+    // If onboarding is completed, the user MUST have connected their calendar
+    // Having zero events is OK - they just don't have meetings scheduled
+    // We MUST check onboarding status FIRST before any calendar check
     
-    hasCheckedCalendarRef.current = true;
+    // Quick check: if we already know onboarding is completed, skip everything
+    if (justCompletedOnboarding || onboardingCompleted) {
+      console.log('✅ Onboarding already completed (from state) - skipping calendar check entirely. Loading meetings.');
+      hasCheckedCalendarRef.current = true;
+      loadTodaysMeetings();
+      return;
+    }
     
-    const checkCalendarConnection = async () => {
+    console.log('🚀 Starting calendar connection check - will verify onboarding first');
+    hasCheckedCalendarRef.current = true; // Mark as checked to prevent duplicate checks
+    
+    const verifyOnboardingAndCheckCalendar = async () => {
+      console.log('🔍 verifyOnboardingAndCheckCalendar: Starting...');
       try {
-        const status = await getCalendarSyncStatus();
-        
-        // If no events found, redirect to connect calendar page
-        if (status.success && status.data && status.data.status === 'no_events' && status.data.total_events === 0) {
-          navigate('/connect-calendar');
+        const token = await (async () => {
+          const { createClient } = await import('@supabase/supabase-js');
+          const supabase = createClient(
+            process.env.REACT_APP_SUPABASE_URL,
+            process.env.REACT_APP_SUPABASE_ANON_KEY
+          );
+          const { data: { session } } = await supabase.auth.getSession();
+          return session?.access_token || null;
+        })();
+
+        if (!token) {
+          console.log('⚠️ No auth token, cannot verify onboarding status');
           return;
         }
-        // If calendar is connected, load meetings
-        loadTodaysMeetings();
+
+        const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+        
+        // ALWAYS check onboarding status FIRST from API (don't rely on state)
+        console.log('🔍 Checking onboarding status before calendar check...');
+        const response = await fetch(`${apiUrl}/icp/status`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const isOnboardingCompleted = data.onboarding_completed || false;
+          
+          console.log(`📋 Onboarding status: ${isOnboardingCompleted ? 'COMPLETED' : 'NOT COMPLETED'}`);
+          
+          // Update state
+          setOnboardingCompleted(isOnboardingCompleted);
+          
+          // CRITICAL: If onboarding is completed, calendar is already connected
+          // NEVER redirect to connect-calendar, regardless of event count
+          if (isOnboardingCompleted || justCompletedOnboarding) {
+            console.log('✅ Onboarding completed - calendar is already connected. Events are optional. Loading meetings.');
+            loadTodaysMeetings();
+            return;
+          }
+
+          // Onboarding NOT completed - check if calendar is connected by checking for events
+          console.log('🔍 Onboarding not completed, checking calendar connection status...');
+          const status = await getCalendarSyncStatus();
+
+          // If no events found AND onboarding not completed, redirect to connect calendar
+          if (status.success && status.data && status.data.status === 'no_events' && status.data.total_events === 0) {
+            console.log('⚠️ No calendar events found and onboarding not completed, redirecting to connect calendar');
+            navigate('/connect-calendar');
+            return;
+          }
+          
+          // Calendar is connected (has events) or status check succeeded
+          console.log('✅ Calendar has events or status check succeeded, loading meetings');
+          loadTodaysMeetings();
+        } else {
+          console.log('⚠️ Failed to check onboarding status from API');
+          // If we can't check onboarding status, err on the side of caution
+          // If user is on dashboard, they likely completed onboarding
+          // Only redirect if we're absolutely sure onboarding is not completed AND no events
+          if (!onboardingCompleted && !justCompletedOnboarding) {
+            console.log('⚠️ Onboarding status unknown, checking calendar as fallback');
+            const status = await getCalendarSyncStatus();
+            if (status.success && status.data && status.data.status === 'no_events' && status.data.total_events === 0) {
+              console.log('⚠️ No calendar events and onboarding status unknown, but err on safe side - loading meetings');
+              // Don't redirect - user might have completed onboarding but API check failed
+              loadTodaysMeetings();
+              return;
+            }
+          }
+          console.log('✅ Loading meetings (onboarding status check failed but state suggests completed)');
+          loadTodaysMeetings();
+        }
       } catch (error) {
-        // If error checking status, assume calendar not connected
-        console.log('Error checking calendar status, redirecting to connect:', error);
+        console.log('❌ Error in verifyOnboardingAndCheckCalendar:', error);
+        // If error, check current state - if onboarding completed, don't redirect
+        if (onboardingCompleted || justCompletedOnboarding) {
+          console.log('✅ Onboarding completed (from state) - calendar is connected. Error checking status, but loading meetings anyway.');
+          loadTodaysMeetings();
+          return;
+        }
+        // Only redirect if we're sure onboarding is not completed
+        console.log('⚠️ Error checking status and onboarding not completed, redirecting to connect:', error);
         navigate('/connect-calendar');
       }
     };
 
-    checkCalendarConnection();
-  }, [user?.email]); // Only depend on user email, not the whole user object
+    verifyOnboardingAndCheckCalendar();
+  }, [user?.email, onboardingCheckComplete, justCompletedOnboarding, onboardingCompleted]); // Wait for onboarding check
 
   // Live Agent Activity - Rotating contextual messages (UI theatre)
   useEffect(() => {

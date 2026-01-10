@@ -89,28 +89,6 @@ const DataEnrichment = () => {
     setEnrichmentError(null);
 
     try {
-      // Get the first active API key (bridge API requires X-API-Key header)
-      const activeApiKey = apiKeys.find(key => key.isActive);
-      if (!activeApiKey) {
-        setEnrichmentError('No active API key found. Please go to the "API Integration" tab to generate an API key first.');
-        setIsEnriching(false);
-        setTimeout(() => setEnrichmentError(null), 10000); // Show for 10 seconds so user can read it
-        return;
-      }
-
-      // Use the full key if available, otherwise use the key prefix
-      const apiKey = activeApiKey.fullKey || activeApiKey.key;
-      
-      // Log which API key is being used (masked for security)
-      const maskedKey = apiKey.length > 10 ? `${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}` : '***';
-      console.log('🔑 Selected API key:', maskedKey);
-      console.log('📋 API key details:', {
-        id: activeApiKey.id,
-        name: activeApiKey.name,
-        isActive: activeApiKey.isActive,
-        keyPrefix: maskedKey
-      });
-
       // Get auth token for fetching preferences
       const { createClient } = await import('@supabase/supabase-js');
       const supabase = createClient(
@@ -182,7 +160,7 @@ const DataEnrichment = () => {
         uploadedFile,
         includes,
         customQuestions, // Include custom questions from ICP settings
-        apiKey
+        token
       );
 
       setEnrichmentSuccess('Successfully uploaded person CSV file. Processing will begin shortly.');

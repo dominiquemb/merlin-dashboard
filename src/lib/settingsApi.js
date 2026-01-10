@@ -6,7 +6,7 @@ const supabase = createClient(
 );
 
 // Use the same API base URL as merlin-core-app
-const API_URL = process.env.REACT_APP_SETTINGS_API_URL || 'https://int.dev.usemerlin.io';
+const API_URL = process.env.REACT_APP_SETTINGS_API_URL || 'https://merlin-core-api.onrender.com';
 
 /**
  * Signup to the settings API and get JWT token
