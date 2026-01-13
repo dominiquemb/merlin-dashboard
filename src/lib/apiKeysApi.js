@@ -202,9 +202,9 @@ export const deleteApiKey = async (keyId) => {
 
 /**
  * Fetch usage logs
- * Uses GET /v1/stats/logs endpoint from merlin-integration API
+ * Uses GET /v1/logs endpoint from merlin-integration API
  */
-export const fetchLogs = async (page = 1, limit = 10) => {
+export const fetchLogs = async (page = 1, limit = 25) => {
   try {
     const token = await getAuthToken();
     if (!token) {
@@ -214,9 +214,10 @@ export const fetchLogs = async (page = 1, limit = 10) => {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
+      type: '1',
     });
 
-    const response = await fetch(`${INTEGRATION_API_URL}/v1/stats/logs?${params.toString()}`, {
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/logs?${params.toString()}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -232,7 +233,7 @@ export const fetchLogs = async (page = 1, limit = 10) => {
     const result = await response.json();
 
     // Transform response to match expected format
-    // Integration API returns: { error: false, message: "General.OK_REGISTER", data: { info: [...], pages: N } }
+    // Integration API returns: { error: false, message: "...", data: { info: [...], pages: N } }
     if (result.data) {
       return {
         logs: result.data.info || [],

@@ -30,7 +30,7 @@ export const uploadCompanyCsv = async (file, includes = {}, questions = [], apiK
     
     formData.append('json', JSON.stringify(jsonPayload));
 
-    const response = await fetch(`${INTEGRATION_API_URL}/upload/company`, {
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/upload/company`, {
       method: 'POST',
       headers: {
         'X-API-Key': apiKey,
@@ -62,7 +62,7 @@ export const uploadPersonCsv = async (file, includes = {}, questions = [], token
     // Log API key being used (masked for security)
     const maskedToken = token.length > 10 ? `${token.substring(0, 10)}...${token.substring(token.length - 4)}` : '***';
     console.log('🔑 Using Supabase token for integration API:', maskedToken);
-    console.log('📤 Uploading to:', `${INTEGRATION_API_URL}/upload/person`);
+    console.log('📤 Uploading to:', `${INTEGRATION_API_URL}/v1/upload/person`);
 
     const formData = new FormData();
     formData.append('file_upload', file);
@@ -75,7 +75,7 @@ export const uploadPersonCsv = async (file, includes = {}, questions = [], token
 
     formData.append('json', JSON.stringify(jsonPayload));
 
-    const response = await fetch(`${INTEGRATION_API_URL}/upload/person`, {
+    const response = await fetch(`${INTEGRATION_API_URL}/v1/upload/person`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

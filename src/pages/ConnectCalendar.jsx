@@ -2,10 +2,40 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const ConnectCalendar = () => {
-  const handleConnectCalendar = (provider) => {
-    const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
-    const authUrl = `${apiUrl}/${provider}`;
-    window.location.href = authUrl;
+  const { user } = useAuth();
+
+  const handleConnectCalendar = async (provider) => {
+    try {
+      // Get Supabase session token
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(
+        process.env.REACT_APP_SUPABASE_URL,
+        process.env.REACT_APP_SUPABASE_ANON_KEY
+      );
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const userEmail = user?.email;
+
+      if (!token || !userEmail) {
+        console.error('No auth token or email found');
+        alert('Please log in again to connect your calendar');
+        return;
+      }
+
+      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+
+      // Pass Supabase user email and token as state parameter in OAuth flow
+      const stateData = btoa(JSON.stringify({
+        supabase_email: userEmail,
+        supabase_token: token
+      }));
+
+      const authUrl = `${apiUrl}/${provider}?state=${encodeURIComponent(stateData)}`;
+      window.location.href = authUrl;
+    } catch (error) {
+      console.error('Error initiating calendar connection:', error);
+      alert('Failed to connect calendar. Please try again.');
+    }
   };
 
   return (

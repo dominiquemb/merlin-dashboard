@@ -22,6 +22,8 @@ const DataEnrichment = () => {
   const [newApiKey, setNewApiKey] = useState(null); // Store newly generated key temporarily
   const [logs, setLogs] = useState([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [currentLogsPage, setCurrentLogsPage] = useState(1);
+  const [totalLogsPages, setTotalLogsPages] = useState(0);
 
   // Pre-select some fields
   const [selectedFields, setSelectedFields] = useState([
@@ -165,6 +167,9 @@ const DataEnrichment = () => {
 
       setEnrichmentSuccess('Successfully uploaded person CSV file. Processing will begin shortly.');
 
+      // Scroll to top to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       // Send notification to insights@usemerlin.io via formsubmit.co
       try {
         const formData = new FormData();
@@ -240,7 +245,8 @@ const DataEnrichment = () => {
     }
     // Load usage logs when Past Uploads tab is active
     if (activeTab === 'past-uploads') {
-      fetchUsageLogs();
+      setCurrentLogsPage(1);
+      fetchUsageLogs(1);
     }
   }, [activeTab]);
 
@@ -281,11 +287,13 @@ const DataEnrichment = () => {
     }
   };
 
-  const fetchUsageLogs = async () => {
+  const fetchUsageLogs = async (page = 1) => {
     setIsLoadingLogs(true);
     try {
-      const result = await fetchLogs(1, 10);
+      const result = await fetchLogs(page, 25);
       setLogs(result.logs);
+      setTotalLogsPages(result.totalPages);
+      setCurrentLogsPage(page);
     } catch (error) {
       console.error('Failed to fetch logs:', error);
     } finally {
@@ -1024,6 +1032,79 @@ const DataEnrichment = () => {
                   </p>
                 </div>
               </div>
+
+              {/* Get Upload Logs */}
+              <div className="mt-8">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">3. Get Upload Logs</h3>
+                <div className="bg-gray-50 rounded-lg p-4 font-mono text-sm mb-3">
+                  <span className="text-blue-600 font-semibold">GET</span>{' '}
+                  <span className="text-gray-900">https://merlin-core-api.onrender.com/v1/logs?page=1&limit=25&type=0</span>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Headers</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-1">
+                    <div>
+                      <span className="text-accent">Authorization:</span> Bearer YOUR_SUPABASE_TOKEN
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-xs font-medium text-gray-700 mb-2">Query Parameters</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700 space-y-2">
+                    <div>
+                      <span className="text-accent">page:</span> Page number (default: 1)
+                    </div>
+                    <div>
+                      <span className="text-accent">limit:</span> Number of logs per page (default: 25)
+                    </div>
+                    <div>
+                      <span className="text-accent">type:</span> Upload source type
+                      <div className="ml-4 mt-1 space-y-1">
+                        <div>• <span className="text-primary font-semibold">type=0</span> - CSVs uploaded through the API</div>
+                        <div>• <span className="text-primary font-semibold">type=1</span> - CSVs uploaded through the Merlin dashboard</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-gray-700 mb-2">Response</p>
+                  <div className="bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-700">
+                    <pre className="whitespace-pre">{`{
+  "error": false,
+  "message": "General.OK_REGISTER",
+  "data": {
+    "info": [
+      {
+        "kind_of": 1,
+        "endpoint": "Person Lookup With Linkedin Url",
+        "val": "https://linkedin.com/in/john-doe",
+        "includes": {...},
+        "questions": [...],
+        "credits": 3,
+        "email_sent": false,
+        "notify_sent": false,
+        "status": 0,
+        "requested_at": "2026-01-13T00:59:56.414333+00:00"
+      }
+    ],
+    "pages": 5
+  }
+}`}</pre>
+                  </div>
+                </div>
+
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-800">
+                    <span className="font-semibold">Note:</span> The <code className="bg-white px-1 rounded">status</code> field uses numeric codes:
+                    <code className="bg-white px-1 rounded ml-1">0</code> = pending,
+                    <code className="bg-white px-1 rounded ml-1">1</code> = success,
+                    <code className="bg-white px-1 rounded ml-1">2</code> = failed
+                  </p>
+                </div>
+              </div>
             </div>
           </>
         )}
@@ -1043,7 +1124,7 @@ const DataEnrichment = () => {
                   </div>
                 </div>
                 <button
-                  onClick={fetchUsageLogs}
+                  onClick={() => fetchUsageLogs(currentLogsPage)}
                   disabled={isLoadingLogs}
                   className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition disabled:opacity-50"
                 >
@@ -1060,52 +1141,91 @@ const DataEnrichment = () => {
                   </div>
                 </div>
               ) : logs.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Type</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Request ID</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
-                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Created</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {logs.map((log, index) => (
-                        <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-4 px-4 text-sm text-gray-900">{log.type_of || 'N/A'}</td>
-                          <td className="py-4 px-4">
-                            <code className="text-sm font-mono text-gray-700">
-                              {log.req_id ? `${log.req_id.substring(0, 8)}...` : 'N/A'}
-                            </code>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span
-                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
-                                log.status === 'success'
-                                  ? 'bg-green-100 text-green-700'
-                                  : log.status === 'pending'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : 'bg-red-100 text-red-700'
-                              }`}
-                            >
-                              {log.status || 'unknown'}
-                            </span>
-                          </td>
-                          <td className="py-4 px-4 text-sm text-gray-600">
-                            {log.created_at ? new Date(log.created_at).toLocaleString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) : 'N/A'}
-                          </td>
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Type</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Request ID</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Status</th>
+                          <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Created</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {logs.map((log, index) => {
+                          // Map numeric status to text
+                          const getStatusText = (status) => {
+                            if (status === 0) return 'pending';
+                            if (status === 1) return 'success';
+                            if (status === 2) return 'failed';
+                            return 'unknown';
+                          };
+
+                          const statusText = getStatusText(log.status);
+
+                          return (
+                            <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-4 px-4 text-sm text-gray-900">{log.endpoint || 'N/A'}</td>
+                              <td className="py-4 px-4">
+                                <code className="text-sm font-mono text-gray-700">
+                                  {log.val ? (log.val.length > 40 ? `${log.val.substring(0, 40)}...` : log.val) : 'N/A'}
+                                </code>
+                              </td>
+                              <td className="py-4 px-4">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                                    statusText === 'success'
+                                      ? 'bg-green-100 text-green-700'
+                                      : statusText === 'pending'
+                                      ? 'bg-yellow-100 text-yellow-700'
+                                      : 'bg-red-100 text-red-700'
+                                  }`}
+                                >
+                                  {statusText}
+                                </span>
+                              </td>
+                              <td className="py-4 px-4 text-sm text-gray-600">
+                                {log.requested_at ? new Date(log.requested_at).toLocaleString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) : 'N/A'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalLogsPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 px-4">
+                      <div className="text-sm text-gray-600">
+                        Page {currentLogsPage} of {totalLogsPages}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => fetchUsageLogs(currentLogsPage - 1)}
+                          disabled={currentLogsPage === 1 || isLoadingLogs}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          Previous
+                        </button>
+                        <button
+                          onClick={() => fetchUsageLogs(currentLogsPage + 1)}
+                          disabled={currentLogsPage === totalLogsPages || isLoadingLogs}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12">
                   <FiFileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
