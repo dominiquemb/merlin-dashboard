@@ -5,102 +5,108 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getCalendarSyncStatus } from '../lib/calendarApi';
 
-// Helper function to get auth token
-const getAuthToken = async () => {
-  try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(
-      process.env.REACT_APP_SUPABASE_URL,
-      process.env.REACT_APP_SUPABASE_ANON_KEY
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
-  } catch (error) {
-    console.error('Failed to get auth token:', error);
-    return null;
-  }
-};
-
 const Onboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [saveMessage, setSaveMessage] = useState('');
   const [calendarConnected, setCalendarConnected] = useState(false);
   const [isCheckingCalendar, setIsCheckingCalendar] = useState(true);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true);
+  const hasCheckedCalendarParam = React.useRef(false);
 
-  // Check if calendar is already connected
+  // Check if user already completed onboarding (redirect to dashboard if so)
   useEffect(() => {
-    const checkCalendarConnection = async () => {
-      try {
-        // Check URL parameter first
-        const urlParams = new URLSearchParams(window.location.search);
-        const calendarConnectedParam = urlParams.get('calendar_connected');
+    const checkOnboardingStatus = async () => {
+      if (!user?.email) {
+        setIsCheckingOnboarding(false);
+        return;
+      }
 
-        if (calendarConnectedParam === 'true') {
-          console.log('Calendar connected via URL parameter');
-          setCalendarConnected(true);
-          setSaveMessage('✅ Calendar connected successfully! Please complete your onboarding below.');
-          setTimeout(() => setSaveMessage(''), 5000);
-          window.history.replaceState({}, document.title, window.location.pathname);
-          setIsCheckingCalendar(false);
+      try {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(
+          process.env.REACT_APP_SUPABASE_URL,
+          process.env.REACT_APP_SUPABASE_ANON_KEY
+        );
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        if (!token) {
+          setIsCheckingOnboarding(false);
           return;
         }
 
-        // Check calendar sync status from API
-        console.log('Checking calendar sync status...');
-        const status = await getCalendarSyncStatus();
+        const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+        const response = await fetch(`${apiUrl}/icp/status`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
 
-        // If calendar has events or status check succeeded, calendar is connected
-        if (status.success && status.data) {
-          const hasEvents = status.data.total_events > 0;
-          console.log('Calendar status:', status.data, 'Has events:', hasEvents);
-          setCalendarConnected(hasEvents);
-        } else {
-          console.log('Calendar not connected or status check failed');
-          setCalendarConnected(false);
+        if (response.ok) {
+          const data = await response.json();
+          // If onboarding already completed, redirect to dashboard
+          if (data.onboarding_completed) {
+            console.log('[Onboarding] User already completed onboarding, redirecting to dashboard');
+            navigate('/dashboard', { replace: true });
+            return;
+          }
         }
       } catch (error) {
-        console.error('Error checking calendar connection:', error);
-        setCalendarConnected(false);
+        console.error('[Onboarding] Error checking onboarding status:', error);
       } finally {
-        setIsCheckingCalendar(false);
+        setIsCheckingOnboarding(false);
       }
     };
 
+    checkOnboardingStatus();
+  }, [user?.email, navigate]);
+
+  // Check if calendar connection just completed via URL parameter
+  useEffect(() => {
+    // Only check once to avoid issues with React strict mode double-render
+    if (hasCheckedCalendarParam.current) {
+      console.log('[Onboarding] Already checked calendar param, skipping');
+      return;
+    }
+
+    console.log('[Onboarding] Calendar check useEffect running');
+    console.log('[Onboarding] Current URL:', window.location.href);
+
+    const checkCalendarParameter = () => {
+      // ONLY check URL parameter - if calendar_connected=true, show questions
+      const urlParams = new URLSearchParams(window.location.search);
+      const calendarConnectedParam = urlParams.get('calendar_connected');
+      console.log('[Onboarding] calendar_connected param:', calendarConnectedParam);
+
+      if (calendarConnectedParam === 'true') {
+        console.log('[Onboarding] ✅ Calendar just connected, showing questions form');
+        setCalendarConnected(true);
+        setSaveMessage('✅ Calendar connected successfully! Please complete your onboarding below.');
+        setTimeout(() => setSaveMessage(''), 5000);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        console.log('[Onboarding] No calendar_connected param, showing calendar connection page');
+        setCalendarConnected(false);
+      }
+
+      setIsCheckingCalendar(false);
+      hasCheckedCalendarParam.current = true;
+    };
+
     if (user?.email) {
-      checkCalendarConnection();
+      checkCalendarParameter();
     } else {
       setIsCheckingCalendar(false);
     }
   }, [user?.email]);
 
-  // Handle calendar connection
-  const handleConnectCalendar = async (provider) => {
-    try {
-      // Get Supabase session token
-      const token = await getAuthToken();
-      const userEmail = user?.email;
-
-      if (!token || !userEmail) {
-        console.error('No auth token or email found');
-        alert('Please log in again to connect your calendar');
-        return;
-      }
-
-      const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
-
-      // Pass Supabase user email and token as state parameter in OAuth flow
-      const stateData = btoa(JSON.stringify({
-        supabase_email: userEmail,
-        supabase_token: token
-      }));
-
-      const authUrl = `${apiUrl}/${provider}?state=${encodeURIComponent(stateData)}`;
-      window.location.href = authUrl;
-    } catch (error) {
-      console.error('Error initiating calendar connection:', error);
-      alert('Failed to connect calendar. Please try again.');
-    }
+  // Handle calendar connection (same as Meetings page)
+  const handleConnectCalendar = (provider) => {
+    const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
+    const authUrl = `${apiUrl}/${provider}`;
+    window.location.href = authUrl;
   };
 
   // Handle save completion - redirect to dashboard with completion param
@@ -111,8 +117,8 @@ const Onboarding = () => {
     }, 1500);
   };
 
-  // Show loading state while checking calendar
-  if (isCheckingCalendar) {
+  // Show loading state while checking onboarding status or calendar
+  if (isCheckingOnboarding || isCheckingCalendar) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#f5f1e8] via-[#f8f6f1] to-[#faf9f5]">
         <Navbar />

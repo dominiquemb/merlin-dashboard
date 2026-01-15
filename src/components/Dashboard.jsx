@@ -37,10 +37,8 @@ const Dashboard = () => {
     const calendarConnected = urlParams.get('calendar_connected');
 
     if (calendarConnected === 'true') {
-      console.log('User just connected calendar via backend OAuth, redirecting to onboarding');
-      // Clean up URL parameter and redirect immediately
-      window.history.replaceState({}, document.title, window.location.pathname);
-      navigate('/onboarding', { replace: true });
+      console.log('User just connected calendar via backend OAuth, redirecting to onboarding with parameter');
+      navigate('/onboarding?calendar_connected=true', { replace: true });
       return;
     }
   }, [navigate]);
@@ -102,7 +100,11 @@ const Dashboard = () => {
           // Redirect to onboarding if not completed
           if (!data.onboarding_completed) {
             console.log('User has not completed onboarding, redirecting to onboarding');
-            navigate('/onboarding', { replace: true });
+            // Preserve calendar_connected query parameter if present
+            const urlParams = new URLSearchParams(window.location.search);
+            const calendarConnected = urlParams.get('calendar_connected');
+            const onboardingUrl = calendarConnected ? `/onboarding?calendar_connected=true` : '/onboarding';
+            navigate(onboardingUrl, { replace: true });
             return;
           }
 
@@ -111,14 +113,22 @@ const Dashboard = () => {
         } else if (response.status === 401 || response.status === 404) {
           // If auth fails or user not found, redirect to onboarding
           console.log('User authentication failed or user not found, redirecting to onboarding');
-          navigate('/onboarding', { replace: true });
+          // Preserve calendar_connected query parameter if present
+          const urlParams = new URLSearchParams(window.location.search);
+          const calendarConnected = urlParams.get('calendar_connected');
+          const onboardingUrl = calendarConnected ? `/onboarding?calendar_connected=true` : '/onboarding';
+          navigate(onboardingUrl, { replace: true });
           return;
         }
       } catch (error) {
         console.log('Error checking onboarding status:', error);
         // If check fails, redirect to onboarding to be safe
         console.log('Onboarding check failed, redirecting to onboarding as fallback');
-        navigate('/onboarding', { replace: true });
+        // Preserve calendar_connected query parameter if present
+        const urlParams = new URLSearchParams(window.location.search);
+        const calendarConnected = urlParams.get('calendar_connected');
+        const onboardingUrl = calendarConnected ? `/onboarding?calendar_connected=true` : '/onboarding';
+        navigate(onboardingUrl, { replace: true });
       }
     };
 
