@@ -204,9 +204,6 @@ const DataEnrichment = () => {
       // Reset form
       setUploadedFile(null);
 
-      // Refresh recent jobs
-      fetchRecentJobs();
-
       // Clear success message after 10 seconds
       setTimeout(() => {
         setEnrichmentSuccess(null);
@@ -233,10 +230,8 @@ const DataEnrichment = () => {
   };
 
   useEffect(() => {
-    // Load recent jobs when CSV tab is active
+    // Load API keys when CSV tab is active
     if (activeTab === 'csv') {
-      fetchRecentJobs();
-      // Also load API keys for the upload form
       fetchApiKeys();
     }
     // Load API keys when API tab is active
@@ -249,21 +244,6 @@ const DataEnrichment = () => {
       fetchUsageLogs(1);
     }
   }, [activeTab]);
-
-  // Auto-refresh jobs every 30 seconds if there are active jobs
-  useEffect(() => {
-    if (activeTab !== 'csv') return;
-
-    const hasActiveJobs = recentJobs.some(job => ['pending', 'processing'].includes(job.status));
-
-    if (!hasActiveJobs) return;
-
-    const intervalId = setInterval(() => {
-      fetchRecentJobs();
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(intervalId);
-  }, [activeTab, recentJobs]);
 
   const fetchApiKeys = async () => {
     setIsLoadingApiKeys(true);
@@ -692,103 +672,6 @@ const DataEnrichment = () => {
                 )}
               </button>
             </div>
-
-            {/* Recent Jobs */}
-            {recentJobs.length > 0 && (
-              <div className="mt-8 bg-[#fafafa] border border-gray-100 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold text-gray-900">Recent Enrichment Jobs</h2>
-                    {recentJobs.filter(job => ['pending', 'processing'].includes(job.status)).length > 0 && (
-                      <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded">
-                        Auto-refreshing
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    onClick={fetchRecentJobs}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition"
-                  >
-                    <FiDownload className="w-4 h-4" />
-                    Refresh
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {recentJobs.map((job) => (
-                    <div
-                      key={job.id}
-                      className={`flex items-center justify-between p-4 bg-white border-2 rounded-lg transition ${
-                        ['pending', 'processing'].includes(job.status)
-                          ? 'border-blue-300 shadow-sm'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <span className="font-medium text-gray-900">{job.original_filename}</span>
-                          <span
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                              job.status === 'completed'
-                                ? 'bg-green-100 text-green-700'
-                                : job.status === 'processing'
-                                ? 'bg-blue-100 text-blue-700'
-                                : job.status === 'failed'
-                                ? 'bg-red-100 text-red-700'
-                                : 'bg-yellow-100 text-yellow-700'
-                            }`}
-                          >
-                            {['pending', 'processing'].includes(job.status) && (
-                              <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
-                            )}
-                            {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {job.total_records} records • {job.credits_charged} credits • {new Date(job.created_at).toLocaleDateString()}
-                        </div>
-                        {['pending', 'processing'].includes(job.status) && (
-                          <div className="mt-2 text-xs text-blue-600 font-medium">
-                            ⏱ Processing... your CSV will be emailed to {job.delivery_email} when complete
-                          </div>
-                        )}
-                        {job.status === 'completed' && (
-                          <div className="mt-2 text-xs text-green-600 font-medium">
-                            ✓ Completed! Your CSV will be emailed to {job.delivery_email} soon
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {job.status === 'completed' && job.processed_records > 0 && (
-                          <>
-                            <div className="text-sm font-medium text-green-600">
-                              ✓ {job.successful_records}/{job.total_records} successful
-                            </div>
-                            <div className="text-sm text-blue-600 font-medium flex items-center gap-2">
-                              <FiMail className="w-4 h-4" />
-                              CSV will be emailed to {job.delivery_email}
-                            </div>
-                            {/* Download button temporarily disabled - CSV will be emailed instead
-                            <button
-                              onClick={() => handleDownloadCsv(job.id, job.original_filename)}
-                              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition"
-                            >
-                              <FiDownload className="w-4 h-4" />
-                              Download CSV
-                            </button>
-                            */}
-                          </>
-                        )}
-                        {job.status === 'failed' && (
-                          <div className="text-sm font-medium text-red-600">
-                            ✗ Failed
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         )}
 
