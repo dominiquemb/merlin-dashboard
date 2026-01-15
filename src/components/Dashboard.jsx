@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
 import { FiCheckCircle, FiEye, FiClock, FiCalendar, FiUsers, FiMapPin, FiX, FiSend, FiZap, FiVideo, FiTrendingUp, FiArrowRight, FiAward, FiInfo, FiLock, FiTarget } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
-import { fetchCalendarEvents, getCalendarSyncStatus } from '../lib/calendarApi';
+import { fetchCalendarEvents } from '../lib/calendarApi';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -126,131 +126,32 @@ const Dashboard = () => {
   }, [user?.email, navigate]);
 
   useEffect(() => {
-    // Wait for onboarding check to complete before checking calendar
+    // Wait for onboarding check to complete before loading meetings
     if (!onboardingCheckComplete) {
       console.log('⏳ Waiting for onboarding check to complete...');
       return;
     }
 
-    // Only check calendar connection once, when user is available
+    // Only load meetings once, when user is available
     if (!user?.email || hasCheckedCalendarRef.current) {
-      // If user exists and calendar is already checked, just load meetings
+      // If user exists and meetings are already loaded, skip
       if (user?.email && hasCheckedCalendarRef.current) {
         loadTodaysMeetings();
       }
       return;
     }
 
-    // IMPORTANT: Calendar connection is REQUIRED during signup/onboarding
-    // If onboarding is completed, the user MUST have connected their calendar
-    // Having zero events is OK - they just don't have meetings scheduled
-    // We MUST check onboarding status FIRST before any calendar check
-    
-    // Quick check: if we already know onboarding is completed, skip everything
+    // If onboarding is completed, load meetings
     if (justCompletedOnboarding || onboardingCompleted) {
-      console.log('✅ Onboarding already completed (from state) - skipping calendar check entirely. Loading meetings.');
+      console.log('✅ Onboarding completed - loading meetings.');
       hasCheckedCalendarRef.current = true;
       loadTodaysMeetings();
       return;
     }
-    
-    console.log('🚀 Starting calendar connection check - will verify onboarding first');
-    hasCheckedCalendarRef.current = true; // Mark as checked to prevent duplicate checks
-    
-    const verifyOnboardingAndCheckCalendar = async () => {
-      console.log('🔍 verifyOnboardingAndCheckCalendar: Starting...');
-      try {
-        const token = await (async () => {
-          const { createClient } = await import('@supabase/supabase-js');
-          const supabase = createClient(
-            process.env.REACT_APP_SUPABASE_URL,
-            process.env.REACT_APP_SUPABASE_ANON_KEY
-          );
-          const { data: { session } } = await supabase.auth.getSession();
-          return session?.access_token || null;
-        })();
 
-        if (!token) {
-          console.log('⚠️ No auth token, cannot verify onboarding status');
-          return;
-        }
-
-        const apiUrl = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' ? 'https://merlin-heart-1.onrender.com' : 'http://localhost:8000');
-        
-        // ALWAYS check onboarding status FIRST from API (don't rely on state)
-        console.log('🔍 Checking onboarding status before calendar check...');
-        const response = await fetch(`${apiUrl}/icp/status`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const isOnboardingCompleted = data.onboarding_completed || false;
-          
-          console.log(`📋 Onboarding status: ${isOnboardingCompleted ? 'COMPLETED' : 'NOT COMPLETED'}`);
-          
-          // Update state
-          setOnboardingCompleted(isOnboardingCompleted);
-          
-          // CRITICAL: If onboarding is completed, calendar is already connected
-          // NEVER redirect to connect-calendar, regardless of event count
-          if (isOnboardingCompleted || justCompletedOnboarding) {
-            console.log('✅ Onboarding completed - calendar is already connected. Events are optional. Loading meetings.');
-            loadTodaysMeetings();
-            return;
-          }
-
-          // Onboarding NOT completed - check if calendar is connected by checking for events
-          console.log('🔍 Onboarding not completed, checking calendar connection status...');
-          const status = await getCalendarSyncStatus();
-
-          // If no events found AND onboarding not completed, redirect to connect calendar
-          if (status.success && status.data && status.data.status === 'no_events' && status.data.total_events === 0) {
-            console.log('⚠️ No calendar events found and onboarding not completed, redirecting to connect calendar');
-            navigate('/connect-calendar');
-            return;
-          }
-          
-          // Calendar is connected (has events) or status check succeeded
-          console.log('✅ Calendar has events or status check succeeded, loading meetings');
-          loadTodaysMeetings();
-        } else {
-          console.log('⚠️ Failed to check onboarding status from API');
-          // If we can't check onboarding status, err on the side of caution
-          // If user is on dashboard, they likely completed onboarding
-          // Only redirect if we're absolutely sure onboarding is not completed AND no events
-          if (!onboardingCompleted && !justCompletedOnboarding) {
-            console.log('⚠️ Onboarding status unknown, checking calendar as fallback');
-            const status = await getCalendarSyncStatus();
-            if (status.success && status.data && status.data.status === 'no_events' && status.data.total_events === 0) {
-              console.log('⚠️ No calendar events and onboarding status unknown, but err on safe side - loading meetings');
-              // Don't redirect - user might have completed onboarding but API check failed
-              loadTodaysMeetings();
-              return;
-            }
-          }
-          console.log('✅ Loading meetings (onboarding status check failed but state suggests completed)');
-          loadTodaysMeetings();
-        }
-      } catch (error) {
-        console.log('❌ Error in verifyOnboardingAndCheckCalendar:', error);
-        // If error, check current state - if onboarding completed, don't redirect
-        if (onboardingCompleted || justCompletedOnboarding) {
-          console.log('✅ Onboarding completed (from state) - calendar is connected. Error checking status, but loading meetings anyway.');
-          loadTodaysMeetings();
-          return;
-        }
-        // Only redirect if we're sure onboarding is not completed
-        console.log('⚠️ Error checking status and onboarding not completed, redirecting to connect:', error);
-        navigate('/connect-calendar');
-      }
-    };
-
-    verifyOnboardingAndCheckCalendar();
-  }, [user?.email, onboardingCheckComplete, justCompletedOnboarding, onboardingCompleted]); // Wait for onboarding check
+    console.log('⚠️ Onboarding check complete but user not onboarded - should have been redirected');
+    hasCheckedCalendarRef.current = true;
+  }, [user?.email, onboardingCheckComplete, justCompletedOnboarding, onboardingCompleted]);
 
   // Live Agent Activity - Rotating contextual messages (UI theatre)
   useEffect(() => {
